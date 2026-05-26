@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" fill="none">
+  <!-- Hoodie Back -->
+  <path d="M130 40 L80 90 L40 130 L80 150 L80 420 L320 420 L320 150 L360 130 L320 90 L270 40 Q250 50 200 55 Q150 50 130 40Z" fill="black" fill-opacity="0.12" stroke="black" stroke-opacity="0.25" stroke-width="1.5"/>
+  <!-- Hood back -->
+  <path d="M155 42 Q200 30 245 42 Q240 15 200 12 Q160 15 155 42Z" fill="black" fill-opacity="0.08" stroke="black" stroke-opacity="0.2" stroke-width="1"/>
+</svg>

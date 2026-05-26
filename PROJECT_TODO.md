@@ -1,6 +1,6 @@
 # PROJECT TODO — WEB DESAIN BAJU
 
-**Progress:** Phase 1–10 & 12 (basic) selesai · Phase 11, 13–17 belum
+**Progress:** Phase 1–16 selesai (basic) · Phase 17 belum
 
 Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only · Gratis · Export/Import · Responsive · Dark mode
 
@@ -34,27 +34,27 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 3 — DATABASE & STORAGE ✅ *(basic)*
+## PHASE 3 — DATABASE & STORAGE ✅
 
 - [x] Create users table *(Supabase `auth.users`)*
-- [x] Create users profile table (`supabase/migrations/001_initial_schema.sql` + `002_profile_trigger.sql`)
+- [x] Create users profile table
 - [x] Create designs table
 - [x] Create assets table
 - [x] Setup Row Level Security (RLS)
 - [x] Setup user access policy
-- [x] Setup Supabase Storage *(policy siap: `004_storage_policies.sql`)*
-- [ ] Setup upload bucket *(buat bucket `assets` & `thumbnails` di dashboard)*
+- [x] Setup Supabase Storage *(buckets: `assets`, `thumbnails`, `avatars`)*
+- [x] Setup upload bucket *(buat di dashboard + policies di `005_avatars_storage_policies.sql`)*
 
 ---
 
-## PHASE 4 — DASHBOARD ✅ *(basic)*
+## PHASE 4 — DASHBOARD ✅
 
 - [x] Create dashboard page
 - [x] Create recent design section
 - [x] Create new design button
-- [x] Create project cards
-- [x] Create delete project feature
-- [ ] Create rename project feature
+- [x] Create project cards dengan thumbnail
+- [x] Create delete project feature *(dengan konfirmasi)*
+- [x] Create rename project feature *(inline edit)*
 - [x] Create duplicate project feature
 - [x] Create search project feature
 - [x] Create empty state UI
@@ -66,8 +66,8 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 - [x] Create product selection page
 - [x] Add Oversize T-Shirt
 - [x] Add Hoodie
-- [x] Create mockup preview cards *(UI basic)*
-- [x] Create start designing button *(create project → redirect editor)*
+- [x] Create mockup preview cards
+- [x] Create start designing button
 - [ ] Setup template system *(lanjut di Milestone 2)*
 
 ---
@@ -84,7 +84,7 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 7 — MULTI VIEW SYSTEM ✅ *(basic)*
+## PHASE 7 — MULTI VIEW SYSTEM ✅
 
 - [x] Front view canvas
 - [x] Back view canvas
@@ -96,7 +96,7 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 8 — CANVAS FEATURES ✅ *(basic)*
+## PHASE 8 — CANVAS FEATURES ✅
 
 - [x] Upload image · Drag · Resize · Rotate · Delete · Duplicate
 - [x] Layer ordering · Lock/Unlock · Snap guidelines
@@ -120,44 +120,65 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 11 — MOCKUP SYSTEM
+## PHASE 11 — MOCKUP SYSTEM ✅ *(basic)*
 
-- [ ] Front/Back/Left/Right mockup images
-- [ ] Safe print area · Responsive mockup · Shirt color change
+- [x] Safe print area overlay *(toggle on/off)*
+- [x] Shirt color change *(color picker + 10 preset warna)*
+- [x] ShirtColor tersimpan per project
+- [ ] Front/Back/Left/Right mockup images *(SVG placeholder ada, perlu gambar nyata)*
 
 ---
 
-## PHASE 12 — SAVE SYSTEM ✅ *(basic)*
+## PHASE 12 — SAVE SYSTEM ✅
 
 - [x] Autosave · Manual save · Canvas JSON
 - [x] Restore project · Per-view state
-- [ ] Save preview thumbnail
+- [x] Save preview thumbnail *(upload ke Supabase Storage `thumbnails/`)*
 
 ---
 
-## PHASE 13 — EXPORT & IMPORT
+## PHASE 13 — EXPORT & IMPORT ✅
 
-- [ ] Export PNG/JPG/JSON · Import JSON · `.wear` format
-- [ ] Rebuild canvas · Validate files
-
----
-
-## PHASE 14 — MY DESIGNS PAGE
-
-- [ ] Grid · Search · Sort · Delete · Duplicate · Open
+- [x] Export PNG · Export JPG *(view aktif)*
+- [x] Export JSON *(semua view)*
+- [x] Export `.wear` *(full project: canvas + product type + shirt color)*
+- [x] Import `.wear` *(load full project)*
+- [x] Import JSON *(load ke view aktif)*
+- [x] Validasi file saat import
 
 ---
 
-## PHASE 15 — PROFILE PAGE
+## PHASE 14 — MY DESIGNS PAGE ✅
 
-- [ ] Edit profile · Avatar · Username · Dark toggle · Logout
+- [x] Grid tampilan desain
+- [x] Search real-time by judul
+- [x] Sort: terbaru, terlama, nama A-Z, nama Z-A
+- [x] Delete dengan konfirmasi
+- [x] Duplicate
+- [x] Open editor
+- [x] Thumbnail preview
+- [x] Empty state
 
 ---
 
-## PHASE 16 — UI/UX POLISH
+## PHASE 15 — PROFILE PAGE ✅
 
-- [ ] Animations · Skeletons · Hover · Empty states
-- [ ] Mobile editor · Keyboard shortcuts
+- [x] Edit username *(inline)*
+- [x] Upload avatar *(ke Supabase Storage `avatars/`)*
+- [x] Dark mode toggle
+- [x] Logout
+- [x] Statistik jumlah desain
+
+---
+
+## PHASE 16 — UI/UX POLISH ✅
+
+- [x] Skeleton loading *(dashboard & my designs)*
+- [x] Hover animations pada kartu desain
+- [x] Empty states dengan CTA
+- [x] Keyboard shortcuts editor *(Ctrl+Z, Ctrl+Y, Ctrl+S, Ctrl+D, Delete)*
+- [x] Tooltip shortcut pada toolbar
+- [x] Rename inline di dashboard
 
 ---
 
@@ -165,6 +186,17 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 - [ ] Sticker library · Templates · Realtime collab
 - [ ] AI generator · 3D preview · Community
+
+---
+
+## KNOWN ISSUES / TODO LANJUTAN
+
+- [ ] Editor canvas: mockup baju (layout baju) belum tampil — perlu gambar PNG/SVG nyata
+- [ ] Editor canvas: interaksi objek perlu diverifikasi setelah perubahan struktur DOM
+- [ ] Text outline di editor
+- [ ] Image crop di editor
+- [ ] Bottom toolbar editor
+- [ ] Template system
 
 ---
 

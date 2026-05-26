@@ -26,6 +26,7 @@ export interface ObjectProps {
 interface PropertiesPanelProps {
   shirtColor: string;
   onShirtColorChange: (c: string) => void;
+  shirtColorPresets?: { label: string; value: string }[];
   props: ObjectProps;
   onUpdate: (patch: Partial<ObjectProps>) => void;
   onLayer: (dir: "up" | "down" | "top" | "bottom") => void;
@@ -36,6 +37,7 @@ interface PropertiesPanelProps {
 export function PropertiesPanel({
   shirtColor,
   onShirtColorChange,
+  shirtColorPresets = [],
   props,
   onUpdate,
   onLayer,
@@ -49,6 +51,23 @@ export function PropertiesPanel({
       <div className="mt-4 space-y-5">
         <div>
           <label className="text-xs text-zinc-500">Warna kaos</label>
+          {shirtColorPresets.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {shirtColorPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  title={preset.label}
+                  onClick={() => onShirtColorChange(preset.value)}
+                  className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: preset.value,
+                    borderColor: shirtColor === preset.value ? "#7c3aed" : "rgba(255,255,255,0.2)",
+                  }}
+                />
+              ))}
+            </div>
+          )}
           <input
             type="color"
             value={shirtColor}

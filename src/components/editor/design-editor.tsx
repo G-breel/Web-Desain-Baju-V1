@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Copy,
+  Download,
   ImagePlus,
   Lock,
   Redo2,
+  Ruler,
   Save,
   Trash2,
   Type,
@@ -23,18 +25,22 @@ import {
   ZoomOut,
 } from "lucide-react";
 import type { Canvas } from "fabric";
-import { saveCanvasAction } from "@/app/actions/editor";
+import { saveCanvasAction, saveThumbnailAction } from "@/app/actions/editor";
 import {
   PropertiesPanel,
   readObjectProps,
   type ObjectProps,
 } from "@/components/editor/properties-panel";
 import { ViewTabs } from "@/components/editor/view-tabs";
+import { PrintAreaOverlay } from "@/components/editor/print-area-overlay";
+import { ExportImportPanel } from "@/components/editor/export-import-panel";
+import type { WearFileData } from "@/lib/editor/export-helpers";
 import { Button } from "@/components/ui/button";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   DEFAULT_SHIRT_COLOR,
+  SHIRT_COLOR_PRESETS,
 } from "@/lib/editor/constants";
 import { snapObjectToGuides } from "@/lib/editor/fabric-helpers";
 import type { DesignProject, DesignView } from "@/types";
@@ -51,6 +57,12 @@ function parseCanvasData(
     result[v] = data[v] ?? null;
   }
   return result;
+}
+
+function extractShirtColor(raw: DesignProject["canvas_data"]): string {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const meta = data._meta as Record<string, unknown> | undefined;
+  return typeof meta?.shirtColor === "string" ? meta.shirtColor : DEFAULT_SHIRT_COLOR;
 }
 
 export function DesignEditor({ design }: { design: DesignProject }) {
@@ -77,7 +89,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const spaceHeldRef = useRef(false);
 
   const [activeView, setActiveView] = useState<DesignView>("front");
-  const [shirtColor, setShirtColor] = useState(DEFAULT_SHIRT_COLOR);
+  const [shirtColor, setShirtColor] = useState(extractShirtColor(design.canvas_data));
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "saving">(
@@ -85,6 +97,8 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   );
   const [zoom, setZoom] = useState(1);
   const [objectProps, setObjectProps] = useState<ObjectProps>({ kind: "none" });
+  const [showPrintArea, setShowPrintArea] = useState(false);
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   const productLabel =
     design.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt";
@@ -121,9 +135,14 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       persistCurrentView();
       setSaving(true);
       setSaveStatus("saving");
+      // Simpan shirtColor di _meta
+      const dataWithMeta = {
+        ...viewDataRef.current,
+        _meta: { shirtColor },
+      } as Record<DesignView, unknown> & { _meta: { shirtColor: string } };
       const result = await saveCanvasAction(
         design.id,
-        viewDataRef.current as Record<DesignView, unknown>
+        dataWithMeta as Record<DesignView, unknown>
       );
       setSaving(false);
       if (result?.error) {
@@ -133,8 +152,15 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       }
       setSaveStatus("saved");
       if (!silent) toast.success("Desain tersimpan");
+
+      // Generate dan upload thumbnail secara fire-and-forget
+      const canvas = fabricRef.current;
+      if (canvas) {
+        const dataUrl = canvas.toDataURL({ format: "jpeg", quality: 0.8 });
+        void saveThumbnailAction(design.id, dataUrl);
+      }
     },
-    [design.id, persistCurrentView]
+    [design.id, persistCurrentView, shirtColor]
   );
 
   const scheduleAutosave = useCallback(() => {
@@ -377,6 +403,38 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     setZoom(z);
   }, []);
 
+  const handleImportWear = useCallback(
+    async (data: WearFileData) => {
+      viewDataRef.current = {
+        front: data.views.front ?? null,
+        back: data.views.back ?? null,
+        left: data.views.left ?? null,
+        right: data.views.right ?? null,
+      } as Record<DesignView, CanvasJson | null>;
+      setShirtColor(data.shirtColor);
+      await loadViewToCanvas(activeView);
+      void handleSave(true);
+      setShowExportPanel(false);
+    },
+    [activeView, handleSave, loadViewToCanvas]
+  );
+
+  const handleImportJson = useCallback(
+    async (canvasJson: unknown) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      switchingRef.current = true;
+      await canvas.loadFromJSON(canvasJson);
+      canvas.renderAll();
+      switchingRef.current = false;
+      viewDataRef.current[activeView] = canvas.toJSON() as CanvasJson;
+      pushHistory(activeView);
+      void handleSave(true);
+      setShowExportPanel(false);
+    },
+    [activeView, handleSave, pushHistory]
+  );
+
   useEffect(() => {
     let disposed = false;
     const canvasEl = canvasElRef.current;
@@ -530,8 +588,17 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           <Button
             size="sm"
             variant="secondary"
+            onClick={() => setShowExportPanel((v) => !v)}
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             disabled={saving}
             onClick={() => void handleSave()}
+            title="Simpan (Ctrl+S)"
           >
             <Save className="h-4 w-4" />
             Simpan
@@ -540,35 +607,57 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row">
+        {showExportPanel && (
+          <ExportImportPanel
+            fabricRef={fabricRef}
+            viewData={viewDataRef.current}
+            activeView={activeView}
+            productType={design.product_type}
+            shirtColor={shirtColor}
+            title={design.title}
+            onClose={() => setShowExportPanel(false)}
+            onImport={(data) => void handleImportWear(data)}
+            onImportJson={(json) => void handleImportJson(json)}
+          />
+        )}
         <aside className="flex flex-row flex-wrap gap-1 border-b border-white/10 p-2 lg:w-16 lg:flex-col lg:border-b-0 lg:border-r">
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void addText()} title="Teks">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void addText()} title="Tambah Teks">
             <Type className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => fileInputRef.current?.click()} title="Gambar">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => fileInputRef.current?.click()} title="Upload Gambar">
             <ImagePlus className="h-4 w-4" />
           </Button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload(e)} />
           <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void duplicateSelected()} title="Duplikat (Ctrl+D)">
             <Copy className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={deleteSelected} title="Hapus">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={deleteSelected} title="Hapus (Delete)">
             <Trash2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={toggleLock} title="Lock">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={toggleLock} title="Lock / Unlock objek">
             <Lock className="h-4 w-4" />
           </Button>
           <div className="mx-1 hidden h-px w-full bg-white/10 lg:block" />
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleUndo()} title="Undo">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleUndo()} title="Undo (Ctrl+Z)">
             <Undo2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleRedo()} title="Redo">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleRedo()} title="Redo (Ctrl+Y)">
             <Redo2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom + 0.1)} title="Zoom in">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom + 0.1)} title="Zoom in (Ctrl++)">
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom - 0.1)} title="Zoom out">
+          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom - 0.1)} title="Zoom out (Ctrl+-)">
             <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={showPrintArea ? "primary" : "ghost"}
+            size="sm"
+            className="lg:w-full"
+            onClick={() => setShowPrintArea((v) => !v)}
+            title="Toggle Area Cetak"
+          >
+            <Ruler className="h-4 w-4" />
           </Button>
         </aside>
 
@@ -581,7 +670,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
                   Memuat canvas...
                 </div>
               )}
-              <canvas ref={canvasElRef} className={ready ? "block rounded-lg" : "hidden"} />
+              {/* Canvas Fabric.js — tidak ada elemen lain di dalam wrapper ini */}
+              <div className="relative inline-block">
+                <canvas ref={canvasElRef} className={ready ? "block rounded-lg" : "hidden"} />
+                {/* Print area: absolute di atas canvas, pointer-events-none */}
+                {ready && showPrintArea && (
+                  <PrintAreaOverlay
+                    view={activeView}
+                    visible={showPrintArea}
+                    canvasWidth={CANVAS_WIDTH * zoom}
+                    canvasHeight={CANVAS_HEIGHT * zoom}
+                  />
+                )}
+              </div>
             </div>
             <p className="mt-2 text-center text-xs text-zinc-500">
               Space+drag = pan · Snap ke tengah · Ctrl+D duplikat
@@ -592,6 +693,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         <PropertiesPanel
           shirtColor={shirtColor}
           onShirtColorChange={setShirtColor}
+          shirtColorPresets={SHIRT_COLOR_PRESETS}
           props={objectProps}
           onUpdate={(patch) => void applyObjectUpdate(patch)}
           onLayer={applyLayer}
