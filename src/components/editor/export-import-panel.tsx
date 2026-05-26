@@ -109,58 +109,67 @@ export function ExportImportPanel({
   };
 
   return (
-    <div className="absolute right-4 top-16 z-50 w-64 rounded-2xl border border-white/10 bg-zinc-900 p-4 shadow-2xl">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-100">Export / Import</h3>
+    <div className="absolute right-4 top-16 z-50 w-[19rem] rounded-3xl border border-white/10 bg-zinc-950/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Toolkit</p>
+          <h3 className="text-sm font-semibold text-zinc-100">Export / Import</h3>
+        </div>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1 text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
+          className="rounded-xl border border-white/10 p-1.5 text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Export</p>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportPng}>
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Export</p>
+          <div className="grid gap-2">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportPng}>
           <Download className="h-3.5 w-3.5" />
           Export PNG (view aktif)
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportJpg}>
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportJpg}>
           <Download className="h-3.5 w-3.5" />
           Export JPG (view aktif)
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportJson}>
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportJson}>
           <Download className="h-3.5 w-3.5" />
           Export JSON (semua view)
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportWear}>
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleExportWear}>
           <Download className="h-3.5 w-3.5" />
           Export .wear (full project)
-        </Button>
+            </Button>
+          </div>
+        </div>
 
-        <div className="my-2 border-t border-white/10" />
-
-        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Import</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2"
-          onClick={() => wearInputRef.current?.click()}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          Import .wear (full project)
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2"
-          onClick={() => jsonInputRef.current?.click()}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          Import JSON (view aktif)
-        </Button>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Import</p>
+          <div className="grid gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={() => wearInputRef.current?.click()}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Import .wear (full project)
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={() => jsonInputRef.current?.click()}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Import JSON (view aktif)
+            </Button>
+          </div>
+        </div>
 
         <input
           ref={wearInputRef}

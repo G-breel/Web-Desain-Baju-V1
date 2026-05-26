@@ -32,9 +32,10 @@ import {
   type ObjectProps,
 } from "@/components/editor/properties-panel";
 import { ViewTabs } from "@/components/editor/view-tabs";
-import { PrintAreaOverlay } from "@/components/editor/print-area-overlay";
+import { ViewThumbnails } from "@/components/editor/view-thumbnails";
 import { ExportImportPanel } from "@/components/editor/export-import-panel";
 import { EditorStage } from "@/components/editor/editor-stage";
+import { LayersPanel } from "@/components/editor/layers-panel";
 import {
   applyFabricEditorDefaults,
   ensureAllObjectsInteractive,
@@ -56,6 +57,7 @@ import {
   startImageCrop,
   type CropSession,
 } from "@/lib/editor/image-crop";
+import { getPrintArea } from "@/lib/editor/mockup-helpers";
 import type { DesignProject, DesignView } from "@/types";
 
 type CanvasJson = Record<string, unknown>;
@@ -117,6 +119,12 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
   const productLabel =
     design.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt";
+  const activeViewLabel: Record<DesignView, string> = {
+    front: "Depan",
+    back: "Belakang",
+    left: "Kiri",
+    right: "Kanan",
+  };
 
   const syncSelection = useCallback(() => {
     const canvas = fabricRef.current;
@@ -139,21 +147,21 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     const idx = historyIndexRef.current[view];
     const trimmed = stack.slice(0, idx + 1);
     trimmed.push(json);
-    if (trimmed.length > 40) trimmed.shift();
+    if (trimmed.length > 50) trimmed.shift();
     historyRef.current[view] = trimmed;
     historyIndexRef.current[view] = trimmed.length - 1;
     setSaveStatus("unsaved");
   }, []);
 
   const handleSave = useCallback(
-    async (silent = false) => {
+    async (silent = false, nextShirtColor = shirtColor) => {
       persistCurrentView();
       setSaving(true);
       setSaveStatus("saving");
       // Simpan shirtColor di _meta
       const dataWithMeta = {
         ...viewDataRef.current,
-        _meta: { shirtColor },
+        _meta: { shirtColor: nextShirtColor },
       } as Record<DesignView, unknown> & { _meta: { shirtColor: string } };
       const result = await saveCanvasAction(
         design.id,
@@ -182,6 +190,49 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => void handleSave(true), 2500);
   }, [handleSave]);
+
+  const saveDraftToLocal = useCallback(() => {
+    try {
+      const draft = { views: viewDataRef.current, shirtColor };
+      localStorage.setItem(`design-draft-${design.id}`, JSON.stringify(draft));
+    } catch (e) {
+      // ignore quota errors
+    }
+  }, [design.id, shirtColor]);
+
+  const restoreDraftFromLocal = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(`design-draft-${design.id}`);
+      if (!raw) return false;
+      const data = JSON.parse(raw) as { views?: Record<string, unknown>; shirtColor?: string };
+      if (!data.views) return false;
+      viewDataRef.current = {
+        front: (data.views.front as CanvasJson) ?? null,
+        back: (data.views.back as CanvasJson) ?? null,
+        left: (data.views.left as CanvasJson) ?? null,
+        right: (data.views.right as CanvasJson) ?? null,
+      } as Record<DesignView, CanvasJson | null>;
+      if (typeof data.shirtColor === "string") setShirtColor(data.shirtColor);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [design.id]);
+
+  const handleShirtColorChange = useCallback(
+    (c: string) => {
+      setShirtColor(c);
+      try {
+        // store in draft meta
+        (viewDataRef.current as any)._meta = { shirtColor: c };
+      } catch {
+        // ignore
+      }
+      saveDraftToLocal();
+      scheduleAutosave();
+    },
+    [scheduleAutosave, saveDraftToLocal]
+  );
 
   const loadViewToCanvas = useCallback(
     async (view: DesignView) => {
@@ -216,9 +267,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         cropSessionRef.current = null;
         setCropActive(false);
       }
+      // save current view state and draft
       persistCurrentView();
+      saveDraftToLocal();
+      setReady(false);
       setActiveView(next);
       await loadViewToCanvas(next);
+      setReady(true);
     },
     [activeView, loadViewToCanvas, persistCurrentView]
   );
@@ -265,7 +320,6 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     syncSelection();
     scheduleAutosave();
   }, [activeView, pushHistory, scheduleAutosave, syncSelection]);
-
   const addText = useCallback(async () => {
     const fabric = await import("fabric");
     const canvas = fabricRef.current;
@@ -290,6 +344,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      // validate type and size
+      const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (!allowed.includes(file.type)) {
+        toast.error("Format gambar tidak didukung (PNG, JPG, WebP, SVG saja)");
+        e.target.value = "";
+        return;
+      }
+      if (file.size > maxSize) {
+        toast.error("Ukuran file melebihi batas 10MB");
+        e.target.value = "";
+        return;
+      }
       const fabric = await import("fabric");
       const canvas = fabricRef.current;
       if (!canvas) return;
@@ -298,12 +365,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         const img = await fabric.FabricImage.fromURL(url, {
           crossOrigin: "anonymous",
         });
-        const maxW = CANVAS_WIDTH * 0.6;
-        const scale = maxW / (img.width ?? maxW);
+        // place image centered in print area for active view
+        const area = getPrintArea(activeView);
+        const maxW = area.width * 0.9; // leave margin
+        const maxH = area.height * 0.9;
+        const iw = img.width ?? maxW;
+        const ih = img.height ?? maxH;
+        const scale = Math.min(maxW / iw, maxH / ih, 1);
         img.scale(scale);
+        const w = (iw * scale) || maxW;
+        const h = (ih * scale) || maxH;
         img.set({
-          left: CANVAS_WIDTH / 2 - ((img.width ?? 0) * scale) / 2,
-          top: CANVAS_HEIGHT / 2 - ((img.height ?? 0) * scale) / 2,
+          left: area.left + (area.width - w) / 2,
+          top: area.top + (area.height - h) / 2,
           originX: "left",
           originY: "top",
         });
@@ -318,7 +392,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         e.target.value = "";
       }
     },
-    [afterChange]
+    [afterChange, activeView]
   );
 
   const deleteSelected = useCallback(() => {
@@ -362,6 +436,48 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     },
     [afterChange]
   );
+
+  const centerSelected = useCallback(() => {
+    const canvas = fabricRef.current;
+    const obj = canvas?.getActiveObject();
+    if (!canvas || !obj) return;
+    const area = getPrintArea(activeView);
+    const rect = obj.getBoundingRect();
+    const targetX = area.left + area.width / 2;
+    const targetY = area.top + area.height / 2;
+    const deltaX = targetX - (rect.left + rect.width / 2);
+    const deltaY = targetY - (rect.top + rect.height / 2);
+    obj.set({ left: (obj.left ?? 0) + deltaX, top: (obj.top ?? 0) + deltaY });
+    obj.setCoords();
+    canvas.renderAll();
+    afterChange();
+  }, [activeView, afterChange]);
+
+  const fitSelected = useCallback(() => {
+    const canvas = fabricRef.current;
+    const obj = canvas?.getActiveObject();
+    if (!canvas || !obj) return;
+    const area = getPrintArea(activeView);
+    const rect = obj.getBoundingRect();
+    if (!rect.width || !rect.height) return;
+    const scale = Math.min(area.width / rect.width, area.height / rect.height, 1);
+    if (scale < 1) {
+      obj.set({
+        scaleX: (obj.scaleX ?? 1) * scale,
+        scaleY: (obj.scaleY ?? 1) * scale,
+      });
+    }
+    obj.setCoords();
+    const fittedRect = obj.getBoundingRect();
+    const targetX = area.left + area.width / 2;
+    const targetY = area.top + area.height / 2;
+    const deltaX = targetX - (fittedRect.left + fittedRect.width / 2);
+    const deltaY = targetY - (fittedRect.top + fittedRect.height / 2);
+    obj.set({ left: (obj.left ?? 0) + deltaX, top: (obj.top ?? 0) + deltaY });
+    obj.setCoords();
+    canvas.renderAll();
+    afterChange();
+  }, [activeView, afterChange]);
 
   const toggleLock = useCallback(() => {
     const canvas = fabricRef.current;
@@ -481,7 +597,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       } as Record<DesignView, CanvasJson | null>;
       setShirtColor(data.shirtColor);
       await loadViewToCanvas(activeView);
-      void handleSave(true);
+      void handleSave(true, data.shirtColor);
       setShowExportPanel(false);
     },
     [activeView, handleSave, loadViewToCanvas]
@@ -511,6 +627,12 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
     void (async () => {
       const fabric = await import("fabric");
+      const restored = await restoreDraftFromLocal();
+      if (restored) {
+        try {
+          toast.info("Draft desain ditemukan dan dipulihkan");
+        } catch {}
+      }
       if (disposed) return;
 
       applyFabricEditorDefaults(fabric.InteractiveFabricObject);
@@ -614,6 +736,63 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         deleteSelected();
       }
+      // Switch view numeric keys 1-4
+      if (!(e.target as HTMLElement)?.closest("input")) {
+        const map: Record<string, DesignView> = { "1": "front", "2": "back", "3": "left", "4": "right" };
+        if (map[e.key]) {
+          e.preventDefault();
+          void switchView(map[e.key]);
+          return;
+        }
+      }
+
+      // Ctrl+A select all
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        void (async () => {
+          const canvas = fabricRef.current;
+          if (!canvas) return;
+          const fabric = await import("fabric");
+          const objs = canvas.getObjects();
+          if (!objs.length) return;
+          const sel = new fabric.ActiveSelection(objs, { canvas });
+          canvas.setActiveObject(sel);
+          canvas.requestRenderAll();
+          syncSelection();
+        })();
+        return;
+      }
+
+      // Arrow keys - move selected object
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        const canvas = fabricRef.current;
+        const obj = canvas?.getActiveObject();
+        if (!obj) return;
+        const delta = e.shiftKey ? 10 : 1;
+        if (e.key === "ArrowLeft") obj.left = (obj.left ?? 0) - delta;
+        if (e.key === "ArrowRight") obj.left = (obj.left ?? 0) + delta;
+        if (e.key === "ArrowUp") obj.top = (obj.top ?? 0) - delta;
+        if (e.key === "ArrowDown") obj.top = (obj.top ?? 0) + delta;
+        obj.setCoords();
+        canvas?.requestRenderAll();
+        scheduleAutosave();
+        e.preventDefault();
+        return;
+      }
+
+      // Layer control
+      if (e.key === "[") {
+        e.preventDefault();
+        applyLayer("down");
+        return;
+      }
+      if (e.key === "]") {
+        e.preventDefault();
+        applyLayer("up");
+        return;
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") spaceHeldRef.current = false;
@@ -624,11 +803,11 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [handleSave, handleUndo, handleRedo, deleteSelected, duplicateSelected]);
+  }, [handleSave, handleUndo, handleRedo, deleteSelected, duplicateSelected, switchView, applyLayer, scheduleAutosave, syncSelection]);
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-zinc-950">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/90 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
@@ -651,11 +830,25 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ViewTabs active={activeView} onChange={(v) => void switchView(v)} />
+          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-zinc-400 lg:flex">
+            <span className="uppercase tracking-[0.18em] text-zinc-500">Sisi aktif</span>
+            <span className="rounded-full bg-violet-600/20 px-2 py-0.5 text-violet-200">
+              {activeViewLabel[activeView]}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <ViewTabs active={activeView} onChange={(v: DesignView) => void switchView(v)} />
+            <ViewThumbnails
+              productType={design.product_type}
+              active={activeView}
+              onChange={(v: DesignView) => void switchView(v)}
+              shirtColor={shirtColor}
+            />
+          </div>
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => setShowExportPanel((v) => !v)}
+            onClick={() => setShowExportPanel((prev: boolean) => !prev)}
           >
             <Download className="h-4 w-4" />
             Export
@@ -673,6 +866,16 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         </div>
       </header>
 
+      <div className="border-b border-white/10 bg-zinc-950/70 px-4 py-2.5 text-[11px] text-zinc-400 backdrop-blur sm:text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">1-4 ganti view</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Ctrl+S simpan</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Ctrl+D duplikat</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Space + drag geser kanvas</span>
+          <span className="ml-auto hidden text-zinc-500 lg:inline">Gunakan panel kiri untuk tambah objek, panel kanan untuk atur detail.</span>
+        </div>
+      </div>
+
       <div className="flex flex-1 flex-col lg:flex-row">
         {showExportPanel && (
           <ExportImportPanel
@@ -687,50 +890,105 @@ export function DesignEditor({ design }: { design: DesignProject }) {
             onImportJson={(json) => void handleImportJson(json)}
           />
         )}
-        <aside className="flex flex-row flex-wrap gap-1 border-b border-white/10 p-2 lg:w-16 lg:flex-col lg:border-b-0 lg:border-r">
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void addText()} title="Tambah Teks">
-            <Type className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => fileInputRef.current?.click()} title="Upload Gambar">
-            <ImagePlus className="h-4 w-4" />
-          </Button>
+        <aside className="border-b border-white/10 bg-zinc-950/70 p-2 lg:w-64 lg:border-b-0 lg:border-r lg:p-3">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Tambah</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => void addText()} title="Tambah Teks">
+                  <Type className="h-4 w-4" />
+                  <span>Teks</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => fileInputRef.current?.click()} title="Upload Gambar">
+                  <ImagePlus className="h-4 w-4" />
+                  <span>Gambar</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Edit</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => void duplicateSelected()} title="Duplikat (Ctrl+D)">
+                  <Copy className="h-4 w-4" />
+                  <span>Duplikat</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={deleteSelected} title="Hapus (Delete)">
+                  <Trash2 className="h-4 w-4" />
+                  <span>Hapus</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={toggleLock} title="Lock / Unlock objek">
+                  <Lock className="h-4 w-4" />
+                  <span>Lock</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Riwayat</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => void handleUndo()} title="Undo (Ctrl+Z)">
+                  <Undo2 className="h-4 w-4" />
+                  <span>Undo</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => void handleRedo()} title="Redo (Ctrl+Y)">
+                  <Redo2 className="h-4 w-4" />
+                  <span>Redo</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Lihat</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => applyZoom(zoom + 0.1)} title="Zoom in (Ctrl++)">
+                  <ZoomIn className="h-4 w-4" />
+                  <span>Zoom +</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="justify-start lg:w-full" onClick={() => applyZoom(zoom - 0.1)} title="Zoom out (Ctrl+-)">
+                  <ZoomOut className="h-4 w-4" />
+                  <span>Zoom -</span>
+                </Button>
+                <Button
+                  variant={showPrintArea ? "primary" : "ghost"}
+                  size="sm"
+                  className="justify-start lg:w-full"
+                  onClick={() => setShowPrintArea((v) => !v)}
+                  title="Toggle Area Cetak"
+                >
+                  <Ruler className="h-4 w-4" />
+                  <span>Area cetak</span>
+                </Button>
+              </div>
+            </div>
+          </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload(e)} />
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void duplicateSelected()} title="Duplikat (Ctrl+D)">
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={deleteSelected} title="Hapus (Delete)">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={toggleLock} title="Lock / Unlock objek">
-            <Lock className="h-4 w-4" />
-          </Button>
-          <div className="mx-1 hidden h-px w-full bg-white/10 lg:block" />
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleUndo()} title="Undo (Ctrl+Z)">
-            <Undo2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => void handleRedo()} title="Redo (Ctrl+Y)">
-            <Redo2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom + 0.1)} title="Zoom in (Ctrl++)">
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="lg:w-full" onClick={() => applyZoom(zoom - 0.1)} title="Zoom out (Ctrl+-)">
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={showPrintArea ? "primary" : "ghost"}
-            size="sm"
-            className="lg:w-full"
-            onClick={() => setShowPrintArea((v) => !v)}
-            title="Toggle Area Cetak"
-          >
-            <Ruler className="h-4 w-4" />
-          </Button>
         </aside>
 
         <main className="mesh-gradient flex flex-1 items-center justify-center overflow-auto p-4">
-          <div className="relative">
-            <div className="absolute inset-0 -z-10 rounded-3xl opacity-40 blur-2xl" style={{ backgroundColor: shirtColor }} />
+          <div className="relative w-full max-w-[1100px]">
+            <div
+              className="absolute inset-0 -z-10 rounded-3xl opacity-70 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.12), transparent 42%), radial-gradient(circle at 50% 50%, rgba(124,58,237,0.10), transparent 62%)",
+              }}
+            />
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 px-4 py-3 shadow-lg backdrop-blur">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">Canvas aktif</p>
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  {activeViewLabel[activeView]} · {Math.round(zoom * 100)}%
+                </h2>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  Fokus pada area cetak {activeViewLabel[activeView].toLowerCase()} untuk mengatur desain baju.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[11px] text-zinc-400">
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Tarik objek untuk pindah</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Double klik teks untuk edit</span>
+              </div>
+            </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-3 shadow-2xl backdrop-blur">
               <EditorStage
                 canvasRef={canvasElRef}
@@ -748,20 +1006,25 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           </div>
         </main>
 
-        <PropertiesPanel
-          shirtColor={shirtColor}
-          onShirtColorChange={setShirtColor}
-          shirtColorPresets={SHIRT_COLOR_PRESETS}
-          props={objectProps}
-          onUpdate={(patch) => void applyObjectUpdate(patch)}
-          onLayer={applyLayer}
-          onDuplicate={() => void duplicateSelected()}
-          onToggleLock={toggleLock}
-          cropActive={cropActive}
-          onStartCrop={() => void startCropMode()}
-          onApplyCrop={applyCropMode}
-          onCancelCrop={cancelCropMode}
-        />
+        <div className="flex w-full flex-col border-t border-white/10 bg-zinc-950/70 lg:w-80 lg:shrink-0 lg:border-t-0 lg:border-l">
+          <PropertiesPanel
+            shirtColor={shirtColor}
+            onShirtColorChange={handleShirtColorChange}
+            shirtColorPresets={SHIRT_COLOR_PRESETS}
+            props={objectProps}
+            onUpdate={(patch) => void applyObjectUpdate(patch)}
+            onLayer={applyLayer}
+            onDuplicate={() => void duplicateSelected()}
+            onToggleLock={toggleLock}
+            onCenter={centerSelected}
+            onFit={fitSelected}
+            cropActive={cropActive}
+            onStartCrop={() => void startCropMode()}
+            onApplyCrop={applyCropMode}
+            onCancelCrop={cancelCropMode}
+          />
+          <LayersPanel fabricRef={fabricRef} />
+        </div>
       </div>
       {/* Bottom toolbar for small screens */}
       <div className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-zinc-900/80 p-2 shadow-lg backdrop-blur lg:hidden">

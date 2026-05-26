@@ -7,6 +7,8 @@ export type CropSession = {
   frame: Rect;
 };
 
+type NamedFabricObject = FabricObject & { name?: string };
+
 function getSourceSize(image: FabricImage) {
   const el = image.getElement() as HTMLImageElement | HTMLCanvasElement;
   const srcW =
@@ -57,7 +59,7 @@ export async function startImageCrop(
 export function cancelImageCrop(canvas: Canvas) {
   const frame = canvas
     .getObjects()
-    .find((o) => o.name === CROP_FRAME_KEY);
+    .find((o) => (o as NamedFabricObject).name === CROP_FRAME_KEY);
 
   const lockedImage = canvas
     .getObjects()
@@ -134,5 +136,5 @@ export function applyImageCrop(canvas: Canvas, session: CropSession) {
 }
 
 export function isCropFrame(obj: FabricObject) {
-  return obj.name === CROP_FRAME_KEY;
+  return (obj as NamedFabricObject).name === CROP_FRAME_KEY;
 }

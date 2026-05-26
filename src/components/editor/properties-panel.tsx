@@ -34,6 +34,8 @@ interface PropertiesPanelProps {
   onLayer: (dir: "up" | "down" | "top" | "bottom") => void;
   onDuplicate: () => void;
   onToggleLock: () => void;
+  onCenter: () => void;
+  onFit: () => void;
   cropActive?: boolean;
   onStartCrop?: () => void;
   onApplyCrop?: () => void;
@@ -49,20 +51,28 @@ export function PropertiesPanel({
   onLayer,
   onDuplicate,
   onToggleLock,
+  onCenter,
+  onFit,
   cropActive = false,
   onStartCrop,
   onApplyCrop,
   onCancelCrop,
 }: PropertiesPanelProps) {
   return (
-    <aside className="w-full border-t border-white/10 p-4 lg:w-72 lg:border-t-0 lg:border-l lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)]">
-      <h3 className="text-sm font-medium text-zinc-200">Properti</h3>
+    <aside className="w-full border-t border-white/10 p-4 lg:max-h-[calc(100vh-8rem)] lg:w-72 lg:border-l lg:border-t-0 lg:overflow-y-auto">
+      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/8 to-white/[0.03] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-500">Panel kanan</p>
+        <h3 className="mt-1 text-sm font-semibold text-zinc-100">Properti desain</h3>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+          Pilih objek di canvas untuk mengubah teks, gambar, layer, lock, crop, dan penempatan.
+        </p>
+      </div>
 
       <div className="mt-4 space-y-5">
         <div>
-          <label className="text-xs text-zinc-500">Warna kaos</label>
+          <label className="text-xs font-medium text-zinc-300">Warna kaos</label>
           {shirtColorPresets.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1.5 rounded-2xl border border-white/10 bg-black/20 p-2">
               {shirtColorPresets.map((preset) => (
                 <button
                   key={preset.value}
@@ -82,32 +92,38 @@ export function PropertiesPanel({
             type="color"
             value={shirtColor}
             onChange={(e) => onShirtColorChange(e.target.value)}
-            className="mt-2 h-10 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent"
+            className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-white/10 bg-transparent"
           />
         </div>
 
         {props.kind === "none" && (
-          <p className="text-xs leading-relaxed text-zinc-500">
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-3 text-xs leading-relaxed text-zinc-400">
             Tambah teks atau gambar dari toolbar kiri, lalu klik objek di canvas.
             Tarik untuk pindah, sudut untuk resize, handle atas untuk putar.
             Double-klik teks untuk mengedit isinya.
-          </p>
+          </div>
         )}
 
         {props.kind !== "none" && (
           <>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/5 p-2">
               <Button size="sm" variant="secondary" onClick={onDuplicate}>
                 Duplikat
               </Button>
               <Button size="sm" variant="ghost" onClick={onToggleLock}>
                 {props.locked ? "Unlock" : "Lock"}
               </Button>
+              <Button size="sm" variant="ghost" onClick={onCenter}>
+                Center
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onFit}>
+                Fit
+              </Button>
             </div>
 
             <div>
-              <p className="mb-2 text-xs text-zinc-500">Layer</p>
-              <div className="grid grid-cols-2 gap-2">
+              <p className="mb-2 text-xs font-medium text-zinc-300">Layer</p>
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-2">
                 <Button size="sm" variant="ghost" onClick={() => onLayer("up")}>
                   Naik
                 </Button>
@@ -128,7 +144,7 @@ export function PropertiesPanel({
             </div>
 
             <div>
-              <label className="text-xs text-zinc-500">Opacity</label>
+              <label className="text-xs font-medium text-zinc-300">Opacity</label>
               <input
                 type="range"
                 min={0.1}
@@ -148,7 +164,7 @@ export function PropertiesPanel({
           <div className="space-y-3 border-t border-white/10 pt-4">
             <p className="text-xs font-medium text-violet-300">Teks</p>
             <div>
-              <label className="text-xs text-zinc-500">Font</label>
+              <label className="text-xs text-zinc-400">Font</label>
               <select
                 value={props.fontFamily ?? "Arial"}
                 onChange={(e) => onUpdate({ fontFamily: e.target.value })}
@@ -172,7 +188,7 @@ export function PropertiesPanel({
               }
             />
             <div>
-              <label className="text-xs text-zinc-500">Warna teks</label>
+              <label className="text-xs text-zinc-400">Warna teks</label>
               <input
                 type="color"
                 value={props.fill ?? "#18181b"}
@@ -181,7 +197,7 @@ export function PropertiesPanel({
               />
             </div>
             <div>
-              <label className="text-xs text-zinc-500">Outline (Stroke)</label>
+              <label className="text-xs text-zinc-400">Outline (Stroke)</label>
               <div className="mt-1 flex gap-2">
                 <input
                   type="color"
@@ -224,7 +240,7 @@ export function PropertiesPanel({
               </Button>
             </div>
             <div>
-              <label className="text-xs text-zinc-500">Align</label>
+              <label className="text-xs text-zinc-400">Align</label>
               <div className="mt-1 flex gap-1">
                 {(["left", "center", "right"] as const).map((a) => (
                   <Button
@@ -247,7 +263,6 @@ export function PropertiesPanel({
               }
             />
             <Button
-              size="sm"
               variant={props.hasShadow ? "primary" : "ghost"}
               onClick={() => onUpdate({ hasShadow: !props.hasShadow })}
             >
@@ -282,6 +297,14 @@ export function PropertiesPanel({
             >
               Shadow
             </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={onCenter}>
+                Center in Area
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onFit}>
+                Fit to Area
+              </Button>
+            </div>
             <div className="space-y-2 pt-2">
               {!cropActive ? (
                 <Button size="sm" variant="secondary" onClick={() => onStartCrop?.()}>

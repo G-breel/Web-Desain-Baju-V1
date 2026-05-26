@@ -42,7 +42,7 @@ type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 /**
  * Sort desain berdasarkan opsi yang dipilih.
  */
-export function sortDesigns<T extends { title: string; updated_at?: string; created_at: string }>(
+export function sortDesigns<T extends { title: string; updated_at?: string | null; created_at: string }>(
   designs: T[],
   sort: SortOption
 ): T[] {
