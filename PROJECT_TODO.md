@@ -1,6 +1,6 @@
 # PROJECT TODO — WEB DESAIN BAJU
 
-**Progress:** Phase 1–2 selesai · Phase 3–5 selesai (basic) · Phase 6–17 belum
+**Progress:** Phase 1–7 & 12 (basic) selesai · Phase 8–11, 13–17 belum
 
 Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only · Gratis · Export/Import · Responsive · Dark mode
 
@@ -72,27 +72,27 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 6 — EDITOR CORE
+## PHASE 6 — EDITOR CORE ✅ *(basic)*
 
-- [ ] Setup Fabric.js
-- [ ] Create canvas editor
-- [ ] Create canvas toolbar
-- [ ] Create left sidebar
-- [ ] Create right sidebar
-- [ ] Create topbar
+- [x] Setup Fabric.js
+- [x] Create canvas editor
+- [x] Create canvas toolbar
+- [x] Create left sidebar
+- [x] Create right sidebar
+- [x] Create topbar
 - [ ] Create bottom toolbar
 
 ---
 
-## PHASE 7 — MULTI VIEW SYSTEM
+## PHASE 7 — MULTI VIEW SYSTEM ✅ *(basic)*
 
-- [ ] Front view canvas
-- [ ] Back view canvas
-- [ ] Left view canvas
-- [ ] Right view canvas
-- [ ] View switcher tabs
-- [ ] Separate state per view
-- [ ] Sync project save system
+- [x] Front view canvas
+- [x] Back view canvas
+- [x] Left view canvas
+- [x] Right view canvas
+- [x] View switcher tabs
+- [x] Separate state per view
+- [x] Sync project save system
 
 ---
 
@@ -125,10 +125,11 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 12 — SAVE SYSTEM
+## PHASE 12 — SAVE SYSTEM ✅ *(basic)*
 
-- [ ] Autosave · Manual save · Canvas JSON · Thumbnail
-- [ ] Restore project · Per-view state
+- [x] Autosave · Manual save · Canvas JSON
+- [x] Restore project · Per-view state
+- [ ] Save preview thumbnail
 
 ---
 
