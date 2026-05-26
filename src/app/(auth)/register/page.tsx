@@ -1,16 +1,19 @@
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Suspense } from "react";
+import { RegisterForm } from "@/components/auth/register-form";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const metadata = { title: "Daftar" };
 
 export default function RegisterPage() {
   return (
-    <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16">
-      <Card>
-        <CardTitle>Daftar</CardTitle>
-        <CardDescription className="mt-2">
-          Halaman register — Phase 2.
-        </CardDescription>
-      </Card>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-20">
+          <LoadingSpinner size="lg" />
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

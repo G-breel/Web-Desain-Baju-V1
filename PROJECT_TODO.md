@@ -1,6 +1,6 @@
 # PROJECT TODO — WEB DESAIN BAJU
 
-**Progress:** Phase 1 selesai · Phase 2–17 belum dimulai
+**Progress:** Phase 1–2 selesai · Phase 3–17 belum dimulai
 
 Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only · Gratis · Export/Import · Responsive · Dark mode
 
@@ -22,15 +22,15 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 2 — AUTHENTICATION
+## PHASE 2 — AUTHENTICATION ✅
 
-- [ ] Register page
-- [ ] Login page
-- [ ] Logout system
-- [ ] Protected routes
-- [ ] Session management
-- [ ] User profile fetch
-- [ ] Google auth (optional)
+- [x] Register page
+- [x] Login page
+- [x] Logout system
+- [x] Protected routes
+- [x] Session management
+- [x] User profile fetch
+- [x] Google auth (optional)
 
 ---
 

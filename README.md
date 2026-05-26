@@ -13,6 +13,17 @@ npm run dev
 
 Buka [http://localhost:3000](http://localhost:3000).
 
+## Supabase Auth
+
+Di **Authentication → URL Configuration**, tambahkan redirect URL:
+
+- `http://localhost:3000/auth/callback`
+- URL production Vercel (nanti)
+
+Untuk Google OAuth: aktifkan provider di **Authentication → Providers → Google**.
+
+Jalankan migration profil otomatis: `supabase/migrations/002_profile_trigger.sql`
+
 ## Struktur folder
 
 ```
