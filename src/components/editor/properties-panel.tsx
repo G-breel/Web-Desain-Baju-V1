@@ -34,7 +34,10 @@ interface PropertiesPanelProps {
   onLayer: (dir: "up" | "down" | "top" | "bottom") => void;
   onDuplicate: () => void;
   onToggleLock: () => void;
-  onCropImage?: () => void;
+  cropActive?: boolean;
+  onStartCrop?: () => void;
+  onApplyCrop?: () => void;
+  onCancelCrop?: () => void;
 }
 
 export function PropertiesPanel({
@@ -46,6 +49,10 @@ export function PropertiesPanel({
   onLayer,
   onDuplicate,
   onToggleLock,
+  cropActive = false,
+  onStartCrop,
+  onApplyCrop,
+  onCancelCrop,
 }: PropertiesPanelProps) {
   return (
     <aside className="w-full border-t border-white/10 p-4 lg:w-72 lg:border-t-0 lg:border-l lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)]">
@@ -80,8 +87,10 @@ export function PropertiesPanel({
         </div>
 
         {props.kind === "none" && (
-          <p className="text-xs text-zinc-500">
-            Pilih objek di canvas untuk edit properti.
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Tambah teks atau gambar dari toolbar kiri, lalu klik objek di canvas.
+            Tarik untuk pindah, sudut untuk resize, handle atas untuk putar.
+            Double-klik teks untuk mengedit isinya.
           </p>
         )}
 
@@ -273,13 +282,29 @@ export function PropertiesPanel({
             >
               Shadow
             </Button>
-            <div className="pt-2">
-              <Button size="sm" variant="secondary" onClick={() => onCropImage?.()}>
-                Crop to selection
-              </Button>
+            <div className="space-y-2 pt-2">
+              {!cropActive ? (
+                <Button size="sm" variant="secondary" onClick={() => onStartCrop?.()}>
+                  Crop gambar
+                </Button>
+              ) : (
+                <>
+                  <p className="text-xs text-violet-300">
+                    Geser/resize kotak ungu untuk area potong
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="primary" onClick={() => onApplyCrop?.()}>
+                      Terapkan
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => onCancelCrop?.()}>
+                      Batal
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
             <p className="text-xs text-zinc-500">
-              Drag sudut untuk resize · rotasi via handle.
+              Crop memotong dari file asli (tanpa turun resolusi).
             </p>
           </div>
         )}

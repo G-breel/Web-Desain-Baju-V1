@@ -1,16 +1,17 @@
 "use client";
 
-import { getMockupSrc } from "@/lib/editor/mockup-helpers";
+import { ShirtMockup } from "@/components/editor/shirt-mockup";
 import type { DesignView, ProductType } from "@/types";
 
 interface MockupOverlayProps {
   productType: ProductType;
   view: DesignView;
   shirtColor: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
 }
 
+/** @deprecated Gunakan EditorStage + ShirtMockup langsung di editor */
 export function MockupOverlay({
   productType,
   view,
@@ -18,28 +19,14 @@ export function MockupOverlay({
   width,
   height,
 }: MockupOverlayProps) {
-  const src = getMockupSrc(productType, view);
-
   return (
-    <div
-      className="absolute inset-0 z-0 rounded-lg"
-      style={{ width, height }}
-      aria-hidden="true"
-    >
-      {/* Warna baju */}
-      <div
-        className="absolute inset-0 rounded-lg"
-        style={{ backgroundColor: shirtColor }}
-      />
-      {/* Outline/detail baju — pakai img biasa, bukan next/image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt=""
+    <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+      <ShirtMockup
+        productType={productType}
+        view={view}
+        shirtColor={shirtColor}
         width={width}
         height={height}
-        className="absolute inset-0 h-full w-full rounded-lg object-contain"
-        draggable={false}
       />
     </div>
   );

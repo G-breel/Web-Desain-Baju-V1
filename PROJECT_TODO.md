@@ -191,8 +191,8 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ## KNOWN ISSUES / TODO LANJUTAN
 
-- [ ] Editor canvas: mockup baju (layout baju) belum tampil — perlu gambar PNG/SVG nyata
-- [ ] Editor canvas: interaksi objek perlu diverifikasi setelah perubahan struktur DOM
+- [x] Editor canvas: mockup baju SVG profesional (ShirtMockup inline + gradient/shadow)
+- [x] Editor canvas: interaksi Canva-like (drag, resize, rotate, double-klik teks) + fix layering DOM
 - [ ] Text outline di editor
 - [ ] Image crop di editor
 - [ ] Bottom toolbar editor

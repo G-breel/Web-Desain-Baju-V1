@@ -38,13 +38,17 @@ export function LoginForm() {
     if (state?.error) {
       toast.error(state.error);
     }
-  }, [state?.error]);
+  }, [state]);
 
   return (
     <Card className="w-full max-w-md">
       <CardTitle className="text-2xl">Masuk</CardTitle>
       <CardDescription className="mt-2">
-        Lanjutkan desain baju kamu
+        {state?.error ? (
+          <span className="font-medium text-red-400">{state.error}</span>
+        ) : (
+          "Lanjutkan desain baju kamu"
+        )}
       </CardDescription>
 
       <form action={formAction} className="mt-8 space-y-4">

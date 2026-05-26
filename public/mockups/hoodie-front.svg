@@ -1,10 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" fill="none">
-  <!-- Hoodie Front -->
-  <path d="M130 40 L80 90 L40 130 L80 150 L80 420 L320 420 L320 150 L360 130 L320 90 L270 40 Q250 50 230 52 L220 80 L200 90 L180 80 L170 52 Q150 50 130 40Z" fill="black" fill-opacity="0.12" stroke="black" stroke-opacity="0.25" stroke-width="1.5"/>
-  <!-- Hood -->
-  <path d="M155 42 Q200 30 245 42 Q240 20 200 18 Q160 20 155 42Z" fill="black" fill-opacity="0.08" stroke="black" stroke-opacity="0.2" stroke-width="1"/>
-  <!-- Front zipper line -->
-  <line x1="200" y1="90" x2="200" y2="420" stroke="black" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="4 3"/>
-  <!-- Pocket -->
-  <path d="M150 300 Q200 295 250 300 L255 360 Q200 365 145 360 Z" fill="none" stroke="black" stroke-opacity="0.2" stroke-width="1"/>
+  <ellipse cx="200" cy="452" rx="118" ry="14" fill="#000" opacity="0.14"/>
+  <path d="M88 98 L48 132 L28 168 L62 188 L62 432 L338 432 L338 188 L372 168 L352 132 L312 98 Q285 122 200 126 Q115 122 88 98 Z" fill="#e4e4e7"/>
+  <path d="M130 95 Q200 55 270 95 L255 125 Q200 105 145 125 Z" fill="rgba(0,0,0,0.1)"/>
+  <path d="M198 155 L198 432" stroke="rgba(0,0,0,0.12)" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <path d="M145 300 Q200 292 255 300 L258 365 Q200 372 142 365 Z" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.2"/>
+  <path d="M88 98 L48 132 L28 168 L62 188 L62 432 L338 432 L338 188 L372 168 L352 132 L312 98 Q285 122 200 126 Q115 122 88 98 Z" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1.8" stroke-linejoin="round"/>
 </svg>

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" fill="none">
-  <!-- Oversize T-Shirt Back -->
-  <path d="M130 40 L80 80 L40 120 L80 140 L80 420 L320 420 L320 140 L360 120 L320 80 L270 40 Q250 55 200 55 Q150 55 130 40Z" fill="black" fill-opacity="0.12" stroke="black" stroke-opacity="0.25" stroke-width="1.5"/>
-  <!-- Back collar -->
-  <path d="M160 42 Q200 50 240 42" fill="none" stroke="black" stroke-opacity="0.3" stroke-width="1.5"/>
+  <ellipse cx="200" cy="452" rx="118" ry="14" fill="#000" opacity="0.14"/>
+  <path d="M88 98 L48 132 L28 168 L62 188 L62 432 L338 432 L338 188 L372 168 L352 132 L312 98 Q285 118 200 120 Q115 118 88 98 Z" fill="#e4e4e7"/>
+  <path d="M158 104 Q200 112 242 104" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M88 98 L48 132 L28 168 L62 188 L62 432 L338 432 L338 188 L372 168 L352 132 L312 98 Q285 118 200 120 Q115 118 88 98 Z" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.8" stroke-linejoin="round"/>
 </svg>

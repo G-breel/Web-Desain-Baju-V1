@@ -24,7 +24,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import type { Canvas } from "fabric";
+import type { Canvas, FabricImage } from "fabric";
 import { saveCanvasAction, saveThumbnailAction } from "@/app/actions/editor";
 import {
   PropertiesPanel,
@@ -34,6 +34,13 @@ import {
 import { ViewTabs } from "@/components/editor/view-tabs";
 import { PrintAreaOverlay } from "@/components/editor/print-area-overlay";
 import { ExportImportPanel } from "@/components/editor/export-import-panel";
+import { EditorStage } from "@/components/editor/editor-stage";
+import {
+  applyFabricEditorDefaults,
+  ensureAllObjectsInteractive,
+  FABRIC_CANVAS_OPTIONS,
+  refreshCanvasLayout,
+} from "@/lib/editor/fabric-canvas-setup";
 import type { WearFileData } from "@/lib/editor/export-helpers";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +50,12 @@ import {
   SHIRT_COLOR_PRESETS,
 } from "@/lib/editor/constants";
 import { snapObjectToGuides } from "@/lib/editor/fabric-helpers";
+import {
+  applyImageCrop,
+  cancelImageCrop,
+  startImageCrop,
+  type CropSession,
+} from "@/lib/editor/image-crop";
 import type { DesignProject, DesignView } from "@/types";
 
 type CanvasJson = Record<string, unknown>;
@@ -87,6 +100,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const panningRef = useRef(false);
   const panLastRef = useRef({ x: 0, y: 0 });
   const spaceHeldRef = useRef(false);
+  const cropSessionRef = useRef<CropSession | null>(null);
 
   const [activeView, setActiveView] = useState<DesignView>("front");
   const [shirtColor, setShirtColor] = useState(extractShirtColor(design.canvas_data));
@@ -99,6 +113,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const [objectProps, setObjectProps] = useState<ObjectProps>({ kind: "none" });
   const [showPrintArea, setShowPrintArea] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [cropActive, setCropActive] = useState(false);
 
   const productLabel =
     design.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt";
@@ -156,7 +171,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       // Generate dan upload thumbnail secara fire-and-forget
       const canvas = fabricRef.current;
       if (canvas) {
-        const dataUrl = canvas.toDataURL({ format: "jpeg", quality: 0.8 });
+        const dataUrl = canvas.toDataURL({ multiplier: 1, format: "jpeg", quality: 0.8 });
         void saveThumbnailAction(design.id, dataUrl);
       }
     },
@@ -175,11 +190,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       switchingRef.current = true;
       const data = viewDataRef.current[view];
       canvas.clear();
-      canvas.backgroundColor = shirtColor;
+      canvas.backgroundColor = "transparent";
       if (data && Object.keys(data).length > 0) {
         await canvas.loadFromJSON(data);
+        ensureAllObjectsInteractive(canvas);
       }
       canvas.renderAll();
+      refreshCanvasLayout(canvas, zoom);
       switchingRef.current = false;
       if (historyRef.current[view].length === 0) {
         historyRef.current[view] = [canvas.toJSON() as CanvasJson];
@@ -187,12 +204,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       }
       syncSelection();
     },
-    [shirtColor, syncSelection]
+    [syncSelection, zoom]
   );
 
   const switchView = useCallback(
     async (next: DesignView) => {
       if (next === activeView) return;
+      const canvas = fabricRef.current;
+      if (canvas && cropSessionRef.current) {
+        cancelImageCrop(canvas);
+        cropSessionRef.current = null;
+        setCropActive(false);
+      }
       persistCurrentView();
       setActiveView(next);
       await loadViewToCanvas(next);
@@ -210,6 +233,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     if (!canvas) return;
     switchingRef.current = true;
     await canvas.loadFromJSON(json);
+    ensureAllObjectsInteractive(canvas);
     canvas.renderAll();
     switchingRef.current = false;
     viewDataRef.current[view] = json;
@@ -228,6 +252,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     if (!canvas) return;
     switchingRef.current = true;
     await canvas.loadFromJSON(json);
+    ensureAllObjectsInteractive(canvas);
     canvas.renderAll();
     switchingRef.current = false;
     viewDataRef.current[view] = json;
@@ -245,12 +270,15 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     const fabric = await import("fabric");
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const text = new fabric.FabricText("Teks kamu", {
-      left: CANVAS_WIDTH / 2 - 60,
-      top: CANVAS_HEIGHT / 2 - 12,
-      fontSize: 28,
+    const text = new fabric.IText("Ketik teks kamu", {
+      left: CANVAS_WIDTH / 2 - 90,
+      top: CANVAS_HEIGHT / 2 - 16,
+      fontSize: 32,
       fill: "#18181b",
       fontFamily: "Arial",
+      editable: true,
+      originX: "left",
+      originY: "top",
     });
     canvas.add(text);
     canvas.setActiveObject(text);
@@ -276,6 +304,8 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         img.set({
           left: CANVAS_WIDTH / 2 - ((img.width ?? 0) * scale) / 2,
           top: CANVAS_HEIGHT / 2 - ((img.height ?? 0) * scale) / 2,
+          originX: "left",
+          originY: "top",
         });
         canvas.add(img);
         canvas.setActiveObject(img);
@@ -376,11 +406,11 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       if (patch.hasShadow !== undefined) {
         updates.shadow = patch.hasShadow
           ? new fabric.Shadow({
-              color: "rgba(0,0,0,0.35)",
-              blur: 10,
-              offsetX: 3,
-              offsetY: 3,
-            })
+            color: "rgba(0,0,0,0.35)",
+            blur: 10,
+            offsetX: 3,
+            offsetY: 3,
+          })
           : null;
       }
 
@@ -393,61 +423,51 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     [scheduleAutosave, syncSelection]
   );
 
-  const cropSelectedImage = useCallback(async () => {
+  const startCropMode = useCallback(async () => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const obj = canvas.getActiveObject();
-    if (!obj) {
+    if (!obj?.isType("image")) {
       toast.error("Pilih objek gambar terlebih dahulu");
       return;
     }
-    if (obj.type !== "image") {
-      toast.error("Objek yang dipilih bukan gambar");
-      return;
-    }
-
-    // get bounding rect in canvas coordinates
-    const bound = obj.getBoundingRect(true);
-    const left = Math.max(0, bound.left);
-    const top = Math.max(0, bound.top);
-    const width = Math.min(canvas.getWidth() - left, bound.width);
-    const height = Math.min(canvas.getHeight() - top, bound.height);
-
     try {
-      const dataUrl = canvas.toDataURL({ left, top, width, height, format: "png" });
-      // create new image from cropped data and replace
-      const img = await new Promise<any>((resolve, reject) => {
-        // use fabric.Image.fromURL
-        // @ts-ignore
-        fabric.Image.fromURL(dataUrl, (nimg: any) => {
-          if (!nimg) return reject(new Error("failed"));
-          resolve(nimg);
-        }, { crossOrigin: "anonymous" });
-      });
+      const session = await startImageCrop(canvas, obj as FabricImage);
+      cropSessionRef.current = session;
+      setCropActive(true);
+      toast.info("Atur kotak ungu, lalu klik Terapkan crop");
+    } catch {
+      toast.error("Gagal memulai mode crop");
+    }
+  }, []);
 
-      // position new image at original left/top
-      img.set({ left: left, top: top });
-      // remove old object and add new one
-      canvas.remove(obj);
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.renderAll();
+  const applyCropMode = useCallback(() => {
+    const canvas = fabricRef.current;
+    const session = cropSessionRef.current;
+    if (!canvas || !session) return;
+    try {
+      applyImageCrop(canvas, session);
+      cropSessionRef.current = null;
+      setCropActive(false);
       afterChange();
-    } catch (err) {
-      toast.error("Gagal crop gambar");
+      toast.success("Crop diterapkan");
+    } catch {
+      toast.error("Area crop tidak valid");
     }
   }, [afterChange]);
+
+  const cancelCropMode = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (canvas) cancelImageCrop(canvas);
+    cropSessionRef.current = null;
+    setCropActive(false);
+  }, []);
 
   const applyZoom = useCallback((next: number) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const z = Math.min(2, Math.max(0.5, next));
-    canvas.setZoom(z);
-    canvas.setDimensions({
-      width: CANVAS_WIDTH * z,
-      height: CANVAS_HEIGHT * z,
-    });
-    canvas.renderAll();
+    refreshCanvasLayout(canvas, z);
     setZoom(z);
   }, []);
 
@@ -472,7 +492,8 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       const canvas = fabricRef.current;
       if (!canvas) return;
       switchingRef.current = true;
-      await canvas.loadFromJSON(canvasJson);
+      await canvas.loadFromJSON(canvasJson as string | Record<string, unknown>);
+      ensureAllObjectsInteractive(canvas);
       canvas.renderAll();
       switchingRef.current = false;
       viewDataRef.current[activeView] = canvas.toJSON() as CanvasJson;
@@ -489,17 +510,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     if (!canvasEl) return;
 
     void (async () => {
-      const { Canvas } = await import("fabric");
+      const fabric = await import("fabric");
       if (disposed) return;
 
-      const canvas = new Canvas(canvasEl, {
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        backgroundColor: shirtColor,
-        preserveObjectStacking: true,
-      });
-
+      applyFabricEditorDefaults(fabric.InteractiveFabricObject);
+      const canvas = new fabric.Canvas(canvasEl, FABRIC_CANVAS_OPTIONS);
       fabricRef.current = canvas;
+      refreshCanvasLayout(canvas, 1);
 
       canvas.on("selection:created", syncSelection);
       canvas.on("selection:updated", syncSelection);
@@ -539,6 +556,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         if (!spaceHeldRef.current) return;
         panningRef.current = true;
         canvas.selection = false;
+        canvas.discardActiveObject();
         const ev = opt.e as MouseEvent;
         panLastRef.current = { x: ev.clientX, y: ev.clientY };
       });
@@ -550,6 +568,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       });
 
       await loadViewToCanvas("front");
+      refreshCanvasLayout(canvas, 1);
       setReady(true);
     })();
 
@@ -564,9 +583,9 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas || !ready) return;
-    canvas.backgroundColor = shirtColor;
-    canvas.renderAll();
-  }, [shirtColor, ready]);
+    canvas.backgroundColor = "transparent";
+    refreshCanvasLayout(canvas, zoom);
+  }, [shirtColor, ready, zoom]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -713,27 +732,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           <div className="relative">
             <div className="absolute inset-0 -z-10 rounded-3xl opacity-40 blur-2xl" style={{ backgroundColor: shirtColor }} />
             <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-3 shadow-2xl backdrop-blur">
-              {!ready && (
-                <div className="flex items-center justify-center text-sm text-zinc-500" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
-                  Memuat canvas...
-                </div>
-              )}
-              {/* Canvas Fabric.js — tidak ada elemen lain di dalam wrapper ini */}
-              <div className="relative inline-block">
-                <canvas ref={canvasElRef} className={ready ? "block rounded-lg" : "hidden"} />
-                {/* Print area: absolute di atas canvas, pointer-events-none */}
-                {ready && showPrintArea && (
-                  <PrintAreaOverlay
-                    view={activeView}
-                    visible={showPrintArea}
-                    canvasWidth={CANVAS_WIDTH * zoom}
-                    canvasHeight={CANVAS_HEIGHT * zoom}
-                  />
-                )}
-              </div>
+              <EditorStage
+                canvasRef={canvasElRef}
+                ready={ready}
+                zoom={zoom}
+                productType={design.product_type}
+                activeView={activeView}
+                shirtColor={shirtColor}
+                showPrintArea={showPrintArea}
+              />
             </div>
-            <p className="mt-2 text-center text-xs text-zinc-500">
-              Space+drag = pan · Snap ke tengah · Ctrl+D duplikat
+            <p className="mt-2 max-w-sm text-center text-xs text-zinc-500">
+              Klik objek → geser · Tarik sudut → resize · Double-klik teks → edit · Space+drag → geser tampilan
             </p>
           </div>
         </main>
@@ -747,7 +757,10 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           onLayer={applyLayer}
           onDuplicate={() => void duplicateSelected()}
           onToggleLock={toggleLock}
-          onCropImage={() => void cropSelectedImage()}
+          cropActive={cropActive}
+          onStartCrop={() => void startCropMode()}
+          onApplyCrop={applyCropMode}
+          onCancelCrop={cancelCropMode}
         />
       </div>
       {/* Bottom toolbar for small screens */}
