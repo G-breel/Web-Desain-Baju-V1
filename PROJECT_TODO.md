@@ -1,6 +1,6 @@
 # PROJECT TODO — WEB DESAIN BAJU
 
-**Progress:** Phase 1–7 & 12 (basic) selesai · Phase 8–11, 13–17 belum
+**Progress:** Phase 1–10 & 12 (basic) selesai · Phase 11, 13–17 belum
 
 Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only · Gratis · Export/Import · Responsive · Dark mode
 
@@ -96,24 +96,26 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 8 — CANVAS FEATURES
+## PHASE 8 — CANVAS FEATURES ✅ *(basic)*
 
-- [ ] Upload image · Drag · Resize · Rotate · Delete · Duplicate
-- [ ] Layer ordering · Lock/Unlock · Snap guidelines
-- [ ] Zoom · Pan · Undo · Redo
-
----
-
-## PHASE 9 — TEXT FEATURES
-
-- [ ] Add text · Font · Size · Color · Bold · Italic
-- [ ] Alignment · Letter spacing · Shadow · Outline
+- [x] Upload image · Drag · Resize · Rotate · Delete · Duplicate
+- [x] Layer ordering · Lock/Unlock · Snap guidelines
+- [x] Zoom · Pan · Undo · Redo
 
 ---
 
-## PHASE 10 — IMAGE FEATURES
+## PHASE 9 — TEXT FEATURES ✅ *(basic)*
 
-- [ ] Opacity · Shadow · Flip · Crop
+- [x] Add text · Font · Size · Color · Bold · Italic
+- [x] Alignment · Letter spacing · Shadow
+- [ ] Text outline
+
+---
+
+## PHASE 10 — IMAGE FEATURES ✅ *(basic)*
+
+- [x] Opacity · Shadow · Flip
+- [ ] Image crop
 - [ ] Remove background (optional) · Filters (optional)
 
 ---
