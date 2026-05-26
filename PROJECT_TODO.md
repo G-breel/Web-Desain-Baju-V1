@@ -1,6 +1,6 @@
 # PROJECT TODO — WEB DESAIN BAJU
 
-**Progress:** Phase 1–2 selesai · Phase 3–17 belum dimulai
+**Progress:** Phase 1–2 selesai · Phase 3–5 selesai (basic) · Phase 6–17 belum
 
 Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only · Gratis · Export/Import · Responsive · Dark mode
 
@@ -34,40 +34,41 @@ Konsep: Editor desain baju 2D · Multi view (Front/Back/Left/Right) · User only
 
 ---
 
-## PHASE 3 — DATABASE & STORAGE
+## PHASE 3 — DATABASE & STORAGE ✅ *(basic)*
 
-- [ ] Create users table *(SQL draft: `supabase/migrations/001_initial_schema.sql`)*
-- [ ] Create designs table
-- [ ] Create assets table
-- [ ] Setup Supabase Storage
-- [ ] Setup upload bucket
-- [ ] Setup Row Level Security (RLS)
-- [ ] Setup user access policy
+- [x] Create users table *(Supabase `auth.users`)*
+- [x] Create users profile table (`supabase/migrations/001_initial_schema.sql` + `002_profile_trigger.sql`)
+- [x] Create designs table
+- [x] Create assets table
+- [x] Setup Row Level Security (RLS)
+- [x] Setup user access policy
+- [x] Setup Supabase Storage *(policy siap: `004_storage_policies.sql`)*
+- [ ] Setup upload bucket *(buat bucket `assets` & `thumbnails` di dashboard)*
 
 ---
 
-## PHASE 4 — DASHBOARD
+## PHASE 4 — DASHBOARD ✅ *(basic)*
 
-- [ ] Create dashboard page
-- [ ] Create recent design section
-- [ ] Create new design button
-- [ ] Create project cards
-- [ ] Create delete project feature
+- [x] Create dashboard page
+- [x] Create recent design section
+- [x] Create new design button
+- [x] Create project cards
+- [x] Create delete project feature
 - [ ] Create rename project feature
-- [ ] Create duplicate project feature
-- [ ] Create search project feature
-- [ ] Create empty state UI
+- [x] Create duplicate project feature
+- [x] Create search project feature
+- [x] Create empty state UI
 
 ---
 
-## PHASE 5 — PRODUCT SELECTION
+## PHASE 5 — PRODUCT SELECTION ✅ *(basic)*
 
-- [ ] Create product selection page
-- [ ] Add Oversize T-Shirt
-- [ ] Add Hoodie
-- [ ] Create mockup preview cards
-- [ ] Create start designing button
-- [ ] Setup template system
+- [x] Create product selection page
+- [x] Add Oversize T-Shirt
+- [x] Add Hoodie
+- [x] Create mockup preview cards *(UI basic)*
+- [x] Create start designing button *(create project → redirect editor)*
+- [ ] Setup template system *(lanjut di Milestone 2)*
 
 ---
 
