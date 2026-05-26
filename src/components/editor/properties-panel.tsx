@@ -11,6 +11,8 @@ export interface ObjectProps {
   kind: SelectionKind;
   locked?: boolean;
   opacity?: number;
+  stroke?: string;
+  strokeWidth?: number;
   fontFamily?: string;
   fontSize?: number;
   fill?: string;
@@ -32,6 +34,7 @@ interface PropertiesPanelProps {
   onLayer: (dir: "up" | "down" | "top" | "bottom") => void;
   onDuplicate: () => void;
   onToggleLock: () => void;
+  onCropImage?: () => void;
 }
 
 export function PropertiesPanel({
@@ -168,6 +171,25 @@ export function PropertiesPanel({
                 className="mt-1 h-10 w-full rounded-lg border border-white/10"
               />
             </div>
+            <div>
+              <label className="text-xs text-zinc-500">Outline (Stroke)</label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  type="color"
+                  value={props.stroke ?? "#000000"}
+                  onChange={(e) => onUpdate({ stroke: e.target.value })}
+                  className="h-10 w-16 rounded-lg border border-white/10"
+                />
+                <Input
+                  label="Width"
+                  type="number"
+                  min={0}
+                  max={40}
+                  value={props.strokeWidth ?? 0}
+                  onChange={(e) => onUpdate({ strokeWidth: parseInt(e.target.value, 10) || 0 })}
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -251,6 +273,11 @@ export function PropertiesPanel({
             >
               Shadow
             </Button>
+            <div className="pt-2">
+              <Button size="sm" variant="secondary" onClick={() => onCropImage?.()}>
+                Crop to selection
+              </Button>
+            </div>
             <p className="text-xs text-zinc-500">
               Drag sudut untuk resize · rotasi via handle.
             </p>
@@ -290,6 +317,8 @@ export function readObjectProps(obj: FabricObject | null): ObjectProps {
       fontStyle: t.fontStyle ?? "normal",
       textAlign: t.textAlign ?? "left",
       charSpacing: t.charSpacing ?? 0,
+      stroke: typeof (t as any).stroke === "string" ? (t as any).stroke : undefined,
+      strokeWidth: typeof (t as any).strokeWidth === "number" ? (t as any).strokeWidth : undefined,
     };
   }
 

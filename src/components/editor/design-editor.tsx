@@ -370,6 +370,9 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       if (patch.textAlign) updates.textAlign = patch.textAlign;
       if (patch.charSpacing !== undefined) updates.charSpacing = patch.charSpacing;
 
+      if (patch.stroke !== undefined) updates.stroke = patch.stroke;
+      if (patch.strokeWidth !== undefined) updates.strokeWidth = patch.strokeWidth;
+
       if (patch.hasShadow !== undefined) {
         updates.shadow = patch.hasShadow
           ? new fabric.Shadow({
@@ -389,6 +392,51 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     },
     [scheduleAutosave, syncSelection]
   );
+
+  const cropSelectedImage = useCallback(async () => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const obj = canvas.getActiveObject();
+    if (!obj) {
+      toast.error("Pilih objek gambar terlebih dahulu");
+      return;
+    }
+    if (obj.type !== "image") {
+      toast.error("Objek yang dipilih bukan gambar");
+      return;
+    }
+
+    // get bounding rect in canvas coordinates
+    const bound = obj.getBoundingRect(true);
+    const left = Math.max(0, bound.left);
+    const top = Math.max(0, bound.top);
+    const width = Math.min(canvas.getWidth() - left, bound.width);
+    const height = Math.min(canvas.getHeight() - top, bound.height);
+
+    try {
+      const dataUrl = canvas.toDataURL({ left, top, width, height, format: "png" });
+      // create new image from cropped data and replace
+      const img = await new Promise<any>((resolve, reject) => {
+        // use fabric.Image.fromURL
+        // @ts-ignore
+        fabric.Image.fromURL(dataUrl, (nimg: any) => {
+          if (!nimg) return reject(new Error("failed"));
+          resolve(nimg);
+        }, { crossOrigin: "anonymous" });
+      });
+
+      // position new image at original left/top
+      img.set({ left: left, top: top });
+      // remove old object and add new one
+      canvas.remove(obj);
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      afterChange();
+    } catch (err) {
+      toast.error("Gagal crop gambar");
+    }
+  }, [afterChange]);
 
   const applyZoom = useCallback((next: number) => {
     const canvas = fabricRef.current;
@@ -699,7 +747,31 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           onLayer={applyLayer}
           onDuplicate={() => void duplicateSelected()}
           onToggleLock={toggleLock}
+          onCropImage={() => void cropSelectedImage()}
         />
+      </div>
+      {/* Bottom toolbar for small screens */}
+      <div className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-zinc-900/80 p-2 shadow-lg backdrop-blur lg:hidden">
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => void handleUndo()}>
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void handleRedo()}>
+            <Redo2 className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => applyZoom(zoom - 0.1)}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => applyZoom(zoom + 0.1)}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => void handleSave()} disabled={saving}>
+            <Save className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setShowExportPanel((v) => !v)}>
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
