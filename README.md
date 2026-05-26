@@ -13,6 +13,30 @@ npm run dev
 
 Buka [http://localhost:3000](http://localhost:3000).
 
+## Supabase Auth
+
+Di **Authentication → URL Configuration**, tambahkan redirect URL:
+
+- `http://localhost:3000/auth/callback`
+- URL production Vercel (nanti)
+
+Untuk Google OAuth: aktifkan provider di **Authentication → Providers → Google**.
+
+Jalankan migration profil otomatis: `supabase/migrations/002_profile_trigger.sql`
+
+## Supabase Database & Storage
+
+Jalankan migrasi SQL (di Supabase SQL Editor):
+
+- `supabase/migrations/001_initial_schema.sql`
+- `supabase/migrations/002_profile_trigger.sql`
+- `supabase/migrations/003_updated_at_triggers.sql`
+
+Storage (untuk upload asset & thumbnail):
+
+- Buat bucket: `assets`, `thumbnails`
+- Jalankan policy: `supabase/migrations/004_storage_policies.sql`
+
 ## Struktur folder
 
 ```
@@ -24,6 +48,7 @@ src/
     ui/             # Button, card, loading
   lib/
     supabase/       # Client, server, middleware
+    auth/           # Session & profile helpers
   types/
 supabase/migrations/
 ```
