@@ -865,10 +865,23 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !(e.target as HTMLElement)?.closest("input")) {
+      // Helper: cek apakah user sedang mengetik di input/textarea/fabric text editor
+      const target = e.target as HTMLElement;
+      const tag = target?.tagName;
+      const isUserTyping =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable ||
+        !!(fabricRef.current?.getActiveObject() as { isEditing?: boolean } | null)?.isEditing;
+
+      // Space — hanya aktifkan panning jika TIDAK sedang mengetik
+      if (e.code === "Space" && !isUserTyping) {
         spaceHeldRef.current = true;
         e.preventDefault();
+        return;
       }
+
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         void handleSave();
@@ -886,28 +899,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         void duplicateSelected();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (isUserTyping) return;
         deleteSelected();
       }
-      // Switch view numeric keys 1-4
-      // Jangan aktif saat user sedang mengetik di input/textarea/select
-      // atau saat Fabric sedang dalam mode edit teks (double-klik teks)
-      const targetTag = (e.target as HTMLElement)?.tagName;
-      const isTyping =
-        targetTag === "INPUT" ||
-        targetTag === "TEXTAREA" ||
-        targetTag === "SELECT" ||
-        (e.target as HTMLElement)?.isContentEditable ||
-        !!(fabricRef.current?.getActiveObject() as { isEditing?: boolean } | null)?.isEditing;
 
-      if (!isTyping) {
-        const map: Record<string, DesignView> = { "1": "front", "2": "back", "3": "left", "4": "right" };
-        if (map[e.key]) {
-          e.preventDefault();
-          void switchView(map[e.key]);
-          return;
-        }
+      // Semua shortcut di bawah ini tidak aktif saat user sedang mengetik
+      if (isUserTyping) return;
+
+      // Switch view numeric keys 1-4
+      const map: Record<string, DesignView> = { "1": "front", "2": "back", "3": "left", "4": "right" };
+      if (map[e.key]) {
+        e.preventDefault();
+        void switchView(map[e.key]);
+        return;
       }
 
       // Ctrl+A select all
@@ -929,8 +933,6 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
       // Arrow keys - move selected object
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         const canvas = fabricRef.current;
         const obj = canvas?.getActiveObject();
         if (!obj) return;
@@ -959,9 +961,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       }
 
       // Help modal dengan tombol ?
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "?") {
         e.preventDefault();
         setShowHelpModal(true);
         return;
