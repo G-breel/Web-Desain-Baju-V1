@@ -111,6 +111,8 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   // Selalu sync ref dengan state agar event listener canvas dapat nilai terbaru
   activeViewRef.current = activeView;
   const [shirtColor, setShirtColor] = useState(extractShirtColor(design.canvas_data));
+  const shirtColorRef = useRef(shirtColor);
+  shirtColorRef.current = shirtColor; // selalu sync
   const [viewThumbnails, setViewThumbnails] = useState<Partial<Record<DesignView, string>>>({});
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -164,9 +166,10 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const persistCurrentView = useCallback((viewOverride?: DesignView) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const view = viewOverride ?? activeView;
+    // Gunakan activeViewRef.current agar selalu dapat nilai terbaru tanpa stale closure
+    const view = viewOverride ?? activeViewRef.current;
     viewDataRef.current[view] = canvas.toJSON() as CanvasJson;
-  }, [activeView]);
+  }, []); // tidak perlu activeView di deps karena pakai ref
 
   const pushHistory = useCallback((view: DesignView) => {
     const canvas = fabricRef.current;
@@ -183,14 +186,16 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   }, []);
 
   const handleSave = useCallback(
-    async (silent = false, nextShirtColor = shirtColor) => {
+    async (silent = false, nextShirtColor?: string) => {
+      // Gunakan ref agar selalu dapat nilai terbaru tanpa stale closure
+      const colorToSave = nextShirtColor ?? shirtColorRef.current;
       persistCurrentView();
       setSaving(true);
       setSaveStatus("saving");
       // Simpan shirtColor di _meta
       const dataWithMeta = {
         ...viewDataRef.current,
-        _meta: { shirtColor: nextShirtColor },
+        _meta: { shirtColor: colorToSave },
       } as Record<DesignView, unknown> & { _meta: { shirtColor: string } };
       const result = await saveCanvasAction(
         design.id,
@@ -216,7 +221,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         void saveThumbnailAction(design.id, dataUrl);
       }
     },
-    [design.id, persistCurrentView, shirtColor]
+    [design.id, persistCurrentView] // tidak perlu shirtColor karena pakai ref
   );
 
   const scheduleAutosave = useCallback(() => {
