@@ -50,7 +50,7 @@ import {
   DEFAULT_SHIRT_COLOR,
   SHIRT_COLOR_PRESETS,
 } from "@/lib/editor/constants";
-import { snapObjectToGuides } from "@/lib/editor/fabric-helpers";
+import { snapObjectToGuides, constrainToPrintArea, snapToCenter } from "@/lib/editor/fabric-helpers";
 import {
   applyImageCrop,
   cancelImageCrop,
@@ -122,6 +122,10 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const [showPrintArea, setShowPrintArea] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [cropActive, setCropActive] = useState(false);
+  const [isOutside, setIsOutside] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [snapGuides, setSnapGuides] = useState<{ x: boolean; y: boolean }>({ x: false, y: false });
 
   const productLabel =
     design.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt";
@@ -137,6 +141,24 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     if (!canvas) return;
     const obj = canvas.getActiveObject() ?? null;
     setObjectProps(readObjectProps(obj));
+  }, []);
+
+  // Helper function to check if object is outside print area
+  const checkCollision = useCallback((canvas: Canvas, view: DesignView): boolean => {
+    const obj = canvas.getActiveObject();
+    if (!obj) return false;
+    
+    const printArea = getPrintArea(view);
+    const objBounds = obj.getBoundingRect();
+    
+    // Check if object is completely or partially outside print area
+    const isOutside = 
+      objBounds.left < printArea.left ||
+      objBounds.top < printArea.top ||
+      objBounds.left + objBounds.width > printArea.left + printArea.width ||
+      objBounds.top + objBounds.height > printArea.top + printArea.height;
+    
+    return isOutside;
   }, []);
 
   const persistCurrentView = useCallback((viewOverride?: DesignView) => {
@@ -181,6 +203,10 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         return;
       }
       setSaveStatus("saved");
+      // Update timestamp saat berhasil save
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      setLastSavedTime(timeStr);
       if (!silent) toast.success("Desain tersimpan");
 
       // Generate dan upload thumbnail secara fire-and-forget
@@ -676,9 +702,23 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       fabricRef.current = canvas;
       refreshCanvasLayout(canvas, 1);
 
-      canvas.on("selection:created", syncSelection);
-      canvas.on("selection:updated", syncSelection);
-      canvas.on("selection:cleared", () => setObjectProps({ kind: "none" }));
+      const handleCollisionCheck = () => {
+        if (switchingRef.current) return;
+        setIsOutside(checkCollision(canvas, activeViewRef.current));
+      };
+
+      canvas.on("selection:created", () => {
+        syncSelection();
+        handleCollisionCheck();
+      });
+      canvas.on("selection:updated", () => {
+        syncSelection();
+        handleCollisionCheck();
+      });
+      canvas.on("selection:cleared", () => {
+        setObjectProps({ kind: "none" });
+        setIsOutside(false);
+      });
 
       canvas.on("object:modified", () => {
         if (switchingRef.current) return;
@@ -688,7 +728,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         scheduleAutosave();
       });
 
-      canvas.on("object:added", () => {
+      canvas.on("object:added", (e: any) => {
+        const obj = e.target;
+        if (obj && !obj.__uid) {
+          obj.__uid = "obj_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+        }
+        if (switchingRef.current) return;
+        viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
+        pushHistory(activeViewRef.current);
+        scheduleAutosave();
+      });
+
+      canvas.on("object:removed", () => {
         if (switchingRef.current) return;
         viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
         pushHistory(activeViewRef.current);
@@ -697,7 +748,40 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
       canvas.on("object:moving", (e) => {
         const target = e.target;
-        if (target) snapObjectToGuides(target);
+        if (!target) return;
+        
+        // Constrain to print area
+        constrainToPrintArea(target, activeViewRef.current);
+        
+        // Snap to center guides
+        const snap = snapToCenter(target, activeViewRef.current);
+        setSnapGuides(snap);
+        
+        // Check collision
+        handleCollisionCheck();
+      });
+
+      canvas.on("object:scaling", (e) => {
+        const target = e.target;
+        if (target) {
+          constrainToPrintArea(target, activeViewRef.current);
+        }
+        handleCollisionCheck();
+      });
+
+      canvas.on("object:rotating", (e) => {
+        const target = e.target;
+        if (target) {
+          constrainToPrintArea(target, activeViewRef.current);
+        }
+        handleCollisionCheck();
+      });
+
+      canvas.on("mouse:up", () => {
+        panningRef.current = false;
+        canvas.selection = true;
+        // Clear snap guides when mouse up
+        setSnapGuides({ x: false, y: false });
       });
 
       const onPanMove = (opt: { e: MouseEvent | TouchEvent }) => {
@@ -722,10 +806,6 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       });
 
       canvas.on("mouse:move", onPanMove);
-      canvas.on("mouse:up", () => {
-        panningRef.current = false;
-        canvas.selection = true;
-      });
 
       await loadViewToCanvas("front");
       refreshCanvasLayout(canvas, 1);
@@ -841,6 +921,24 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         applyLayer("up");
         return;
       }
+
+      // Help modal dengan tombol ?
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        setShowHelpModal(true);
+        return;
+      }
+
+      // Escape untuk tutup modal
+      if (e.key === "Escape") {
+        if (showHelpModal) {
+          e.preventDefault();
+          setShowHelpModal(false);
+          return;
+        }
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") spaceHeldRef.current = false;
@@ -873,7 +971,9 @@ export function DesignEditor({ design }: { design: DesignProject }) {
                 ? "Menyimpan..."
                 : saveStatus === "unsaved"
                   ? "Belum disimpan"
-                  : "Tersimpan"}
+                  : lastSavedTime
+                    ? `Tersimpan ✓ — ${lastSavedTime}`
+                    : "Tersimpan ✓"}
             </p>
           </div>
         </div>
@@ -1047,8 +1147,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
                 activeView={activeView}
                 shirtColor={shirtColor}
                 showPrintArea={showPrintArea}
+                isOutside={isOutside}
+                snapGuides={snapGuides}
               />
             </div>
+            {isOutside && (
+              <div className="mt-2 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Objek berada di luar area cetak</span>
+              </div>
+            )}
             <p className="mt-2 max-w-sm text-center text-xs text-zinc-500">
               Klik objek → geser · Tarik sudut → resize · Double-klik teks → edit · Space+drag → geser tampilan
             </p>
@@ -1098,6 +1208,130 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           </Button>
         </div>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div 
+            className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-zinc-100">Keyboard Shortcuts</h2>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="rounded-lg p-2 text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
+                title="Tutup (Esc)"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-violet-400">Umum</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Simpan manual</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Ctrl+S</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Pilih semua objek</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Ctrl+A</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Bantuan (modal ini)</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">?</kbd>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-violet-400">Edit Objek</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Undo</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Ctrl+Z</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Redo</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Ctrl+Y / Ctrl+Shift+Z</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Duplikasi objek</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Ctrl+D</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Hapus objek terpilih</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Delete / Backspace</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Batalkan seleksi</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Escape</kbd>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-violet-400">Pindah Objek</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Pindah objek (1px)</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Arrow Keys</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Pindah objek (10px)</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Shift+Arrow Keys</kbd>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-violet-400">Layer</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Layer ke atas</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">]</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Layer ke bawah</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">[</kbd>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-violet-400">View</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Pindah ke view Depan / Belakang / Kiri / Kanan</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">1 / 2 / 3 / 4</kbd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-zinc-300">Geser tampilan canvas</span>
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-400">Space+Drag</kbd>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-300">
+              <p className="font-semibold">💡 Tips:</p>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-zinc-400">
+                <li>Double-klik teks untuk mengedit langsung di canvas</li>
+                <li>Tarik sudut objek untuk resize, handle atas untuk rotate</li>
+                <li>Desain otomatis tersimpan setiap 2.5 detik</li>
+                <li>Objek di luar area cetak akan ditandai dengan border merah</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

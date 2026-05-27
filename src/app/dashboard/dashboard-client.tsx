@@ -108,7 +108,7 @@ export function DashboardClient({
           placeholder="Cari proyek..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+          className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100"
         />
       </div>
 
@@ -121,12 +121,12 @@ export function DashboardClient({
 
       {/* Empty state */}
       {!isPending && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-20 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 text-center dark:border-white/10">
           <div className="mb-4 text-5xl">🎨</div>
-          <h3 className="text-lg font-semibold text-zinc-200">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-200">
             {query ? "Tidak ada hasil" : "Belum ada proyek"}
           </h3>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-500">
             {query ? "Coba kata kunci lain." : "Pilih produk dan mulai desain pertama kamu."}
           </p>
           {!query && (
@@ -146,10 +146,10 @@ export function DashboardClient({
           {filtered.map((d) => (
             <div
               key={d.id}
-              className="group flex flex-col rounded-2xl border border-white/10 bg-zinc-900/50 p-4 transition-all duration-200 hover:scale-[1.01] hover:border-white/20 hover:shadow-xl"
+              className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-4 transition-all duration-200 hover:scale-[1.01] hover:border-zinc-300 hover:shadow-xl dark:border-white/10 dark:bg-zinc-900/50 dark:hover:border-white/20"
             >
               {/* Thumbnail */}
-              <div className="mb-3 overflow-hidden rounded-xl bg-zinc-800">
+              <div className="mb-3 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
                 {d.thumbnail_url ? (
                   <Image
                     src={d.thumbnail_url}
@@ -159,7 +159,7 @@ export function DashboardClient({
                     className="h-36 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-36 items-center justify-center text-4xl text-zinc-600">
+                  <div className="flex h-36 items-center justify-center text-4xl text-zinc-300 dark:text-zinc-600">
                     👕
                   </div>
                 )}
@@ -177,7 +177,7 @@ export function DashboardClient({
                       if (e.key === "Escape") setRenamingId(null);
                     }}
                     onBlur={() => commitRename(d.id)}
-                    className="flex-1 rounded-lg border border-violet-500 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none"
+                    className="flex-1 rounded-lg border border-violet-500 bg-white px-2 py-1 text-sm text-zinc-900 focus:outline-none dark:bg-zinc-800 dark:text-zinc-100"
                   />
                   <button
                     type="button"
@@ -189,18 +189,18 @@ export function DashboardClient({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); setRenamingId(null); }}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-zinc-400"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 dark:border-white/10 dark:text-zinc-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ) : (
                 <div className="mb-1 flex items-center gap-1.5">
-                  <h3 className="line-clamp-1 flex-1 font-semibold text-zinc-100">{d.title}</h3>
+                  <h3 className="line-clamp-1 flex-1 font-semibold text-zinc-900 dark:text-zinc-100">{d.title}</h3>
                   <button
                     type="button"
                     onClick={() => startRename(d)}
-                    className="rounded-lg p-1 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-300"
+                    className="rounded-lg p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-300"
                     title="Rename"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -208,7 +208,7 @@ export function DashboardClient({
                 </div>
               )}
 
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-600 dark:text-zinc-500">
                 {d.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt"} ·{" "}
                 {new Date(d.updated_at ?? d.created_at).toLocaleDateString("id-ID", {
                   day: "numeric",
@@ -230,7 +230,7 @@ export function DashboardClient({
                   type="button"
                   onClick={() => handleDuplicate(d.id)}
                   title="Duplikat"
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-zinc-200 hover:bg-white/10"
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10"
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>
@@ -246,7 +246,7 @@ export function DashboardClient({
                     <button
                       type="button"
                       onClick={() => setDeleteConfirmId(null)}
-                      className="inline-flex h-9 items-center rounded-xl border border-white/10 px-2 text-xs text-zinc-400 hover:bg-white/5"
+                      className="inline-flex h-9 items-center rounded-xl border border-zinc-200 px-2 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:text-zinc-400 dark:hover:bg-white/5"
                     >
                       Batal
                     </button>
@@ -256,7 +256,7 @@ export function DashboardClient({
                     type="button"
                     onClick={() => setDeleteConfirmId(d.id)}
                     title="Hapus"
-                    className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-red-400 hover:bg-red-500/10"
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-red-600 hover:bg-red-50 dark:border-white/10 dark:bg-white/5 dark:text-red-400 dark:hover:bg-red-500/10"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

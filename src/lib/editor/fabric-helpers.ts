@@ -1,5 +1,7 @@
 import type { FabricObject } from "fabric";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./constants";
+import { getPrintArea } from "./mockup-helpers";
+import type { DesignView } from "@/types";
 
 const SNAP = 8;
 
@@ -9,6 +11,76 @@ export function isTextObject(obj: FabricObject) {
 
 export function isImageObject(obj: FabricObject) {
   return obj.type === "image";
+}
+
+/**
+ * Constrain object movement to stay within print area boundaries
+ */
+export function constrainToPrintArea(obj: FabricObject, view: DesignView) {
+  const printArea = getPrintArea(view);
+  const bound = obj.getBoundingRect();
+  
+  let left = obj.left ?? 0;
+  let top = obj.top ?? 0;
+  
+  // Constrain left edge
+  if (bound.left < printArea.left) {
+    left += printArea.left - bound.left;
+  }
+  
+  // Constrain top edge
+  if (bound.top < printArea.top) {
+    top += printArea.top - bound.top;
+  }
+  
+  // Constrain right edge
+  if (bound.left + bound.width > printArea.left + printArea.width) {
+    left -= (bound.left + bound.width) - (printArea.left + printArea.width);
+  }
+  
+  // Constrain bottom edge
+  if (bound.top + bound.height > printArea.top + printArea.height) {
+    top -= (bound.top + bound.height) - (printArea.top + printArea.height);
+  }
+  
+  obj.set({ left, top });
+  obj.setCoords();
+}
+
+/**
+ * Snap object to center guides (horizontal and vertical center lines)
+ */
+export function snapToCenter(obj: FabricObject, view: DesignView): { x: boolean; y: boolean } {
+  const printArea = getPrintArea(view);
+  const bound = obj.getBoundingRect();
+  
+  const objCenterX = bound.left + bound.width / 2;
+  const objCenterY = bound.top + bound.height / 2;
+  
+  const areaCenterX = printArea.left + printArea.width / 2;
+  const areaCenterY = printArea.top + printArea.height / 2;
+  
+  let left = obj.left ?? 0;
+  let top = obj.top ?? 0;
+  let snapX = false;
+  let snapY = false;
+  
+  // Snap to vertical center line
+  if (Math.abs(objCenterX - areaCenterX) < SNAP) {
+    left += areaCenterX - objCenterX;
+    snapX = true;
+  }
+  
+  // Snap to horizontal center line
+  if (Math.abs(objCenterY - areaCenterY) < SNAP) {
+    top += areaCenterY - objCenterY;
+    snapY = true;
+  }
+  
+  obj.set({ left, top });
+  obj.setCoords();
+  
+  return { x: snapX, y: snapY };
 }
 
 export function snapObjectToGuides(obj: FabricObject) {
