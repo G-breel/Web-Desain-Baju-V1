@@ -48,9 +48,10 @@ export function constrainToPrintArea(obj: FabricObject, view: DesignView) {
 }
 
 /**
- * Snap object to center guides (horizontal and vertical center lines)
+ * Snap object to center guides (horizontal and vertical center lines).
+ * Returns snap state and "near" state (within 24px) for showing guide lines.
  */
-export function snapToCenter(obj: FabricObject, view: DesignView): { x: boolean; y: boolean } {
+export function snapToCenter(obj: FabricObject, view: DesignView): { x: boolean; y: boolean; nearX: boolean; nearY: boolean } {
   const printArea = getPrintArea(view);
   const bound = obj.getBoundingRect();
   
@@ -59,6 +60,8 @@ export function snapToCenter(obj: FabricObject, view: DesignView): { x: boolean;
   
   const areaCenterX = printArea.left + printArea.width / 2;
   const areaCenterY = printArea.top + printArea.height / 2;
+  
+  const NEAR = 24; // show guide line when within 24px
   
   let left = obj.left ?? 0;
   let top = obj.top ?? 0;
@@ -80,7 +83,17 @@ export function snapToCenter(obj: FabricObject, view: DesignView): { x: boolean;
   obj.set({ left, top });
   obj.setCoords();
   
-  return { x: snapX, y: snapY };
+  // Recalculate after snap for near detection
+  const newBound = obj.getBoundingRect();
+  const newCX = newBound.left + newBound.width / 2;
+  const newCY = newBound.top + newBound.height / 2;
+  
+  return {
+    x: snapX,
+    y: snapY,
+    nearX: Math.abs(newCX - areaCenterX) < NEAR,
+    nearY: Math.abs(newCY - areaCenterY) < NEAR,
+  };
 }
 
 export function snapObjectToGuides(obj: FabricObject) {

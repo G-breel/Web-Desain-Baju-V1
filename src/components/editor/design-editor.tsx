@@ -125,7 +125,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   const [isOutside, setIsOutside] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [snapGuides, setSnapGuides] = useState<{ x: boolean; y: boolean }>({ x: false, y: false });
+  const [snapGuides, setSnapGuides] = useState<{ x: boolean; y: boolean; nearX: boolean; nearY: boolean }>({ x: false, y: false, nearX: false, nearY: false });
 
   const productLabel =
     design.product_type === "hoodie" ? "Hoodie" : "Oversize T-Shirt";
@@ -750,14 +750,14 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         const target = e.target;
         if (!target) return;
         
-        // Constrain to print area
+        // Constrain to print area — objek tidak bisa keluar batas
         constrainToPrintArea(target, activeViewRef.current);
         
-        // Snap to center guides
+        // Snap to center guides + detect near
         const snap = snapToCenter(target, activeViewRef.current);
         setSnapGuides(snap);
         
-        // Check collision
+        // Check collision (setelah constrain, seharusnya selalu false)
         handleCollisionCheck();
       });
 
@@ -781,7 +781,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         panningRef.current = false;
         canvas.selection = true;
         // Clear snap guides when mouse up
-        setSnapGuides({ x: false, y: false });
+        setSnapGuides({ x: false, y: false, nearX: false, nearY: false });
       });
 
       const onPanMove = (opt: { e: MouseEvent | TouchEvent }) => {
