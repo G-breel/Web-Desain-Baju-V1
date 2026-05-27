@@ -429,25 +429,50 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         const img = await fabric.FabricImage.fromURL(dataUrl, {
           crossOrigin: "anonymous",
         });
+
         const area = getPrintArea(activeView);
+
+        // Ambil dimensi asli gambar — fallback ke area cetak jika tidak tersedia
+        const iw = (img.width && img.width > 0) ? img.width : area.width;
+        const ih = (img.height && img.height > 0) ? img.height : area.height;
+
+        // Target max 90% dari area cetak, selalu scale down jika lebih besar
+        // Juga scale up jika gambar terlalu kecil (min 20% area cetak)
         const maxW = area.width * 0.9;
         const maxH = area.height * 0.9;
-        const iw = img.width ?? maxW;
-        const ih = img.height ?? maxH;
-        const scale = Math.min(maxW / iw, maxH / ih, 1);
+        const minW = area.width * 0.2;
+
+        let scale = Math.min(maxW / iw, maxH / ih);
+        // Jika gambar sangat kecil, scale up sampai minimal minW
+        if (iw * scale < minW) {
+          scale = minW / iw;
+          // Tapi tetap jangan melebihi area cetak
+          scale = Math.min(scale, maxW / iw, maxH / ih);
+        }
+
         img.scale(scale);
-        const w = (iw * scale) || maxW;
-        const h = (ih * scale) || maxH;
+
+        // Hitung dimensi setelah scale
+        const scaledW = iw * scale;
+        const scaledH = ih * scale;
+
+        // Posisikan di tengah area cetak
         img.set({
-          left: area.left + (area.width - w) / 2,
-          top: area.top + (area.height - h) / 2,
+          left: area.left + (area.width - scaledW) / 2,
+          top: area.top + (area.height - scaledH) / 2,
           originX: "left",
           originY: "top",
         });
+        img.setCoords();
+
+        // Pastikan tidak keluar batas area cetak
+        constrainToPrintArea(img, activeView);
+
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
         afterChange();
+        toast.success("Gambar berhasil ditambahkan");
       } catch {
         toast.error("Gagal memuat gambar");
       } finally {
@@ -763,7 +788,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
       canvas.on("object:scaling", (e) => {
         const target = e.target;
-        if (target) {
+        if (!target) return;
+        const printArea = getPrintArea(activeViewRef.current);
+        const bound = target.getBoundingRect();
+        // Jika hasil scaling melebihi area cetak, batalkan scaling
+        if (
+          bound.width > printArea.width ||
+          bound.height > printArea.height ||
+          bound.left < printArea.left ||
+          bound.top < printArea.top ||
+          bound.left + bound.width > printArea.left + printArea.width ||
+          bound.top + bound.height > printArea.top + printArea.height
+        ) {
           constrainToPrintArea(target, activeViewRef.current);
         }
         handleCollisionCheck();

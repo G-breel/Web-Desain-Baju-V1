@@ -14,35 +14,57 @@ export function isImageObject(obj: FabricObject) {
 }
 
 /**
- * Constrain object movement to stay within print area boundaries
+ * Constrain object movement to stay within print area boundaries.
+ * If object is larger than print area, it will be clamped to fit inside.
  */
 export function constrainToPrintArea(obj: FabricObject, view: DesignView) {
   const printArea = getPrintArea(view);
   const bound = obj.getBoundingRect();
-  
+
+  // Jika objek lebih lebar dari area cetak, scale down
+  if (bound.width > printArea.width || bound.height > printArea.height) {
+    const scaleX = (obj.scaleX ?? 1);
+    const scaleY = (obj.scaleY ?? 1);
+    const shrink = Math.min(
+      printArea.width / bound.width,
+      printArea.height / bound.height
+    );
+    obj.set({
+      scaleX: scaleX * shrink,
+      scaleY: scaleY * shrink,
+    });
+    obj.setCoords();
+    // Recalculate bound after scale
+    const newBound = obj.getBoundingRect();
+    bound.left = newBound.left;
+    bound.top = newBound.top;
+    bound.width = newBound.width;
+    bound.height = newBound.height;
+  }
+
   let left = obj.left ?? 0;
   let top = obj.top ?? 0;
-  
+
   // Constrain left edge
   if (bound.left < printArea.left) {
     left += printArea.left - bound.left;
   }
-  
+
   // Constrain top edge
   if (bound.top < printArea.top) {
     top += printArea.top - bound.top;
   }
-  
+
   // Constrain right edge
   if (bound.left + bound.width > printArea.left + printArea.width) {
     left -= (bound.left + bound.width) - (printArea.left + printArea.width);
   }
-  
+
   // Constrain bottom edge
   if (bound.top + bound.height > printArea.top + printArea.height) {
     top -= (bound.top + bound.height) - (printArea.top + printArea.height);
   }
-  
+
   obj.set({ left, top });
   obj.setCoords();
 }
