@@ -868,12 +868,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       // Helper: cek apakah user sedang mengetik di input/textarea/fabric text editor
       const target = e.target as HTMLElement;
       const tag = target?.tagName;
+      const isFabricEditing = !!(fabricRef.current?.getActiveObject() as { isEditing?: boolean } | null)?.isEditing;
       const isUserTyping =
         tag === "INPUT" ||
         tag === "TEXTAREA" ||
         tag === "SELECT" ||
         target?.isContentEditable ||
-        !!(fabricRef.current?.getActiveObject() as { isEditing?: boolean } | null)?.isEditing;
+        isFabricEditing;
 
       // Space — hanya aktifkan panning jika TIDAK sedang mengetik
       if (e.code === "Space" && !isUserTyping) {
@@ -882,25 +883,58 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      // Ctrl+S — simpan (aktif di mana saja kecuali fabric text editing)
+      if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isFabricEditing) {
         e.preventDefault();
         void handleSave();
+        return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+
+      // Ctrl+Z — undo (tidak aktif saat mengetik di input biasa)
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey && !isUserTyping) {
         e.preventDefault();
         void handleUndo();
+        return;
       }
-      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+
+      // Ctrl+Y / Ctrl+Shift+Z — redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey)) && !isUserTyping) {
         e.preventDefault();
         void handleRedo();
+        return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+
+      // Ctrl+D — duplikasi
+      if ((e.ctrlKey || e.metaKey) && e.key === "d" && !isUserTyping) {
         e.preventDefault();
         void duplicateSelected();
+        return;
       }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (isUserTyping) return;
+
+      // Delete / Backspace — hapus objek terpilih
+      if ((e.key === "Delete" || e.key === "Backspace") && !isUserTyping) {
+        e.preventDefault();
         deleteSelected();
+        return;
+      }
+
+      // Escape — batalkan seleksi canvas ATAU tutup modal
+      if (e.key === "Escape") {
+        if (showHelpModal) {
+          e.preventDefault();
+          setShowHelpModal(false);
+          return;
+        }
+        // Batalkan seleksi canvas
+        const canvas = fabricRef.current;
+        if (canvas && canvas.getActiveObject()) {
+          e.preventDefault();
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+          setObjectProps({ kind: "none" });
+          setIsOutside(false);
+          return;
+        }
       }
 
       // Semua shortcut di bawah ini tidak aktif saat user sedang mengetik
@@ -908,13 +942,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
       // Switch view numeric keys 1-4
       const map: Record<string, DesignView> = { "1": "front", "2": "back", "3": "left", "4": "right" };
-      if (map[e.key]) {
+      if (map[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         void switchView(map[e.key]);
         return;
       }
 
-      // Ctrl+A select all
+      // Ctrl+A — pilih semua objek
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
         e.preventDefault();
         void (async () => {
@@ -931,24 +965,26 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         return;
       }
 
-      // Arrow keys - move selected object
+      // Arrow keys — pindah objek terpilih (1px atau 10px dengan Shift)
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
         const canvas = fabricRef.current;
         const obj = canvas?.getActiveObject();
         if (!obj) return;
+        e.preventDefault();
         const delta = e.shiftKey ? 10 : 1;
         if (e.key === "ArrowLeft") obj.left = (obj.left ?? 0) - delta;
         if (e.key === "ArrowRight") obj.left = (obj.left ?? 0) + delta;
         if (e.key === "ArrowUp") obj.top = (obj.top ?? 0) - delta;
         if (e.key === "ArrowDown") obj.top = (obj.top ?? 0) + delta;
         obj.setCoords();
+        // Constrain ke print area setelah dipindah
+        constrainToPrintArea(obj, activeViewRef.current);
         canvas?.requestRenderAll();
         scheduleAutosave();
-        e.preventDefault();
         return;
       }
 
-      // Layer control
+      // [ / ] — layer ke bawah / ke atas
       if (e.key === "[") {
         e.preventDefault();
         applyLayer("down");
@@ -960,20 +996,11 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         return;
       }
 
-      // Help modal dengan tombol ?
+      // ? — buka modal bantuan shortcut
       if (e.key === "?") {
         e.preventDefault();
         setShowHelpModal(true);
         return;
-      }
-
-      // Escape untuk tutup modal
-      if (e.key === "Escape") {
-        if (showHelpModal) {
-          e.preventDefault();
-          setShowHelpModal(false);
-          return;
-        }
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
