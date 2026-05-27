@@ -226,9 +226,13 @@ export function DesignEditor({ design }: { design: DesignProject }) {
 
   const saveDraftToLocal = useCallback(() => {
     try {
-      const draft = { views: viewDataRef.current, shirtColor };
+      const draft = {
+        views: viewDataRef.current,
+        shirtColor,
+        savedAt: Date.now(),
+      };
       localStorage.setItem(`design-draft-${design.id}`, JSON.stringify(draft));
-    } catch (e) {
+    } catch {
       // ignore quota errors
     }
   }, [design.id, shirtColor]);
@@ -237,8 +241,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     try {
       const raw = localStorage.getItem(`design-draft-${design.id}`);
       if (!raw) return false;
-      const data = JSON.parse(raw) as { views?: Record<string, unknown>; shirtColor?: string };
+      const data = JSON.parse(raw) as {
+        views?: Record<string, unknown>;
+        shirtColor?: string;
+        savedAt?: number;
+      };
       if (!data.views) return false;
+
+      // Jangan restore draft yang lebih dari 24 jam
+      if (data.savedAt && Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(`design-draft-${design.id}`);
+        return false;
+      }
+
       viewDataRef.current = {
         front: (data.views.front as CanvasJson) ?? null,
         back: (data.views.back as CanvasJson) ?? null,
@@ -367,16 +382,27 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     pushHistory(activeView);
     syncSelection();
     scheduleAutosave();
-    // Update thumbnail view aktif — debounce 600ms agar tidak berat
+    // Simpan ke localStorage segera setiap ada perubahan (tidak debounce)
+    // agar data tidak hilang saat refresh
+    try {
+      const draft = {
+        views: viewDataRef.current,
+        shirtColor: (viewDataRef.current as any)._meta?.shirtColor,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(`design-draft-${design.id}`, JSON.stringify(draft));
+    } catch {
+      // ignore quota errors
+    }
+    // Update thumbnail view aktif — debounce 400ms agar tidak berat
     if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current);
     thumbTimerRef.current = setTimeout(() => {
       const c = fabricRef.current;
       if (!c || switchingRef.current) return;
-      // PNG dengan background transparan agar overlay terlihat di semua background
       const dataUrl = c.toDataURL({ format: "png", multiplier: 0.5 });
       setViewThumbnails((prev) => ({ ...prev, [activeViewRef.current]: dataUrl }));
     }, 400);
-  }, [activeView, pushHistory, scheduleAutosave, syncSelection]);
+  }, [activeView, design.id, pushHistory, scheduleAutosave, syncSelection]);
   const addText = useCallback(async () => {
     const fabric = await import("fabric");
     const canvas = fabricRef.current;
@@ -1013,6 +1039,30 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       window.removeEventListener("keyup", onKeyUp);
     };
   }, [handleSave, handleUndo, handleRedo, deleteSelected, duplicateSelected, switchView, applyLayer, scheduleAutosave, syncSelection]);
+
+  // Simpan ke localStorage saat user mau refresh/tutup tab
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Persist canvas terbaru ke viewDataRef
+      const canvas = fabricRef.current;
+      if (canvas && !switchingRef.current) {
+        viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
+      }
+      // Simpan ke localStorage sebagai emergency draft
+      try {
+        const draft = {
+          views: viewDataRef.current,
+          shirtColor,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(`design-draft-${design.id}`, JSON.stringify(draft));
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [design.id, shirtColor]);
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950">
