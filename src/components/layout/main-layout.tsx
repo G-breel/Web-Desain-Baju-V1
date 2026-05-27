@@ -8,7 +8,7 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <Navbar user={user} />
-      <main className="flex-1">{children}</main>
+      <main className="flex flex-1 flex-col">{children}</main>
       <Footer />
     </div>
   );

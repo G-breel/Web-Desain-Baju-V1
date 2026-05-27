@@ -99,13 +99,19 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   });
   const switchingRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panningRef = useRef(false);
   const panLastRef = useRef({ x: 0, y: 0 });
   const spaceHeldRef = useRef(false);
   const cropSessionRef = useRef<CropSession | null>(null);
+  // Ref untuk activeView agar event listener canvas selalu dapat nilai terbaru
+  const activeViewRef = useRef<DesignView>("front");
 
   const [activeView, setActiveView] = useState<DesignView>("front");
+  // Selalu sync ref dengan state agar event listener canvas dapat nilai terbaru
+  activeViewRef.current = activeView;
   const [shirtColor, setShirtColor] = useState(extractShirtColor(design.canvas_data));
+  const [viewThumbnails, setViewThumbnails] = useState<Partial<Record<DesignView, string>>>({});
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "saving">(
@@ -133,10 +139,11 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     setObjectProps(readObjectProps(obj));
   }, []);
 
-  const persistCurrentView = useCallback(() => {
+  const persistCurrentView = useCallback((viewOverride?: DesignView) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    viewDataRef.current[activeView] = canvas.toJSON() as CanvasJson;
+    const view = viewOverride ?? activeView;
+    viewDataRef.current[view] = canvas.toJSON() as CanvasJson;
   }, [activeView]);
 
   const pushHistory = useCallback((view: DesignView) => {
@@ -267,15 +274,25 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         cropSessionRef.current = null;
         setCropActive(false);
       }
-      // save current view state and draft
-      persistCurrentView();
+      // Capture thumbnail view saat ini sebelum switch
+      if (canvas && !switchingRef.current) {
+        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 0.5 });
+        setViewThumbnails((prev) => ({ ...prev, [activeView]: dataUrl }));
+      }
+      // Simpan state view saat ini secara eksplisit sebelum switch
+      persistCurrentView(activeView);
       saveDraftToLocal();
       setReady(false);
       setActiveView(next);
       await loadViewToCanvas(next);
       setReady(true);
+      // Capture thumbnail view baru setelah load
+      if (canvas && !switchingRef.current) {
+        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 0.5 });
+        setViewThumbnails((prev) => ({ ...prev, [next]: dataUrl }));
+      }
     },
-    [activeView, loadViewToCanvas, persistCurrentView]
+    [activeView, loadViewToCanvas, persistCurrentView, saveDraftToLocal]
   );
 
   const handleUndo = useCallback(async () => {
@@ -316,9 +333,23 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   }, [activeView, scheduleAutosave, syncSelection]);
 
   const afterChange = useCallback(() => {
+    // Simpan state canvas ke viewDataRef SEKARANG sebelum apapun
+    const canvas = fabricRef.current;
+    if (canvas) {
+      viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
+    }
     pushHistory(activeView);
     syncSelection();
     scheduleAutosave();
+    // Update thumbnail view aktif — debounce 600ms agar tidak berat
+    if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current);
+    thumbTimerRef.current = setTimeout(() => {
+      const c = fabricRef.current;
+      if (!c || switchingRef.current) return;
+      // PNG dengan background transparan agar overlay terlihat di semua background
+      const dataUrl = c.toDataURL({ format: "png", multiplier: 0.5 });
+      setViewThumbnails((prev) => ({ ...prev, [activeViewRef.current]: dataUrl }));
+    }, 400);
   }, [activeView, pushHistory, scheduleAutosave, syncSelection]);
   const addText = useCallback(async () => {
     const fabric = await import("fabric");
@@ -344,9 +375,8 @@ export function DesignEditor({ design }: { design: DesignProject }) {
     async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      // validate type and size
       const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 10 * 1024 * 1024;
       if (!allowed.includes(file.type)) {
         toast.error("Format gambar tidak didukung (PNG, JPG, WebP, SVG saja)");
         e.target.value = "";
@@ -357,17 +387,24 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         e.target.value = "";
         return;
       }
+
+      // Konversi ke base64 data URL agar tetap valid saat canvas di-serialize/load ulang
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
       const fabric = await import("fabric");
       const canvas = fabricRef.current;
       if (!canvas) return;
-      const url = URL.createObjectURL(file);
       try {
-        const img = await fabric.FabricImage.fromURL(url, {
+        const img = await fabric.FabricImage.fromURL(dataUrl, {
           crossOrigin: "anonymous",
         });
-        // place image centered in print area for active view
         const area = getPrintArea(activeView);
-        const maxW = area.width * 0.9; // leave margin
+        const maxW = area.width * 0.9;
         const maxH = area.height * 0.9;
         const iw = img.width ?? maxW;
         const ih = img.height ?? maxH;
@@ -388,7 +425,6 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       } catch {
         toast.error("Gagal memuat gambar");
       } finally {
-        URL.revokeObjectURL(url);
         e.target.value = "";
       }
     },
@@ -645,16 +681,18 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       canvas.on("selection:cleared", () => setObjectProps({ kind: "none" }));
 
       canvas.on("object:modified", () => {
-        pushHistory(activeView);
+        if (switchingRef.current) return;
+        viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
+        pushHistory(activeViewRef.current);
         syncSelection();
         scheduleAutosave();
       });
 
       canvas.on("object:added", () => {
-        if (!switchingRef.current) {
-          pushHistory(activeView);
-          scheduleAutosave();
-        }
+        if (switchingRef.current) return;
+        viewDataRef.current[activeViewRef.current] = canvas.toJSON() as CanvasJson;
+        pushHistory(activeViewRef.current);
+        scheduleAutosave();
       });
 
       canvas.on("object:moving", (e) => {
@@ -737,7 +775,17 @@ export function DesignEditor({ design }: { design: DesignProject }) {
         deleteSelected();
       }
       // Switch view numeric keys 1-4
-      if (!(e.target as HTMLElement)?.closest("input")) {
+      // Jangan aktif saat user sedang mengetik di input/textarea/select
+      // atau saat Fabric sedang dalam mode edit teks (double-klik teks)
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      const isTyping =
+        targetTag === "INPUT" ||
+        targetTag === "TEXTAREA" ||
+        targetTag === "SELECT" ||
+        (e.target as HTMLElement)?.isContentEditable ||
+        !!(fabricRef.current?.getActiveObject() as { isEditing?: boolean } | null)?.isEditing;
+
+      if (!isTyping) {
         const map: Record<string, DesignView> = { "1": "front", "2": "back", "3": "left", "4": "right" };
         if (map[e.key]) {
           e.preventDefault();
@@ -806,7 +854,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
   }, [handleSave, handleUndo, handleRedo, deleteSelected, duplicateSelected, switchView, applyLayer, scheduleAutosave, syncSelection]);
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-950">
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/90 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Link
@@ -843,6 +891,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
               active={activeView}
               onChange={(v: DesignView) => void switchView(v)}
               shirtColor={shirtColor}
+              viewThumbnails={viewThumbnails}
             />
           </div>
           <Button
@@ -890,7 +939,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
             onImportJson={(json) => void handleImportJson(json)}
           />
         )}
-        <aside className="border-b border-white/10 bg-zinc-950/70 p-2 lg:w-64 lg:border-b-0 lg:border-r lg:p-3">
+        <aside className="border-b border-white/10 bg-zinc-950/70 p-2 lg:sticky lg:top-16 lg:w-64 lg:shrink-0 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r lg:p-3">
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Tambah</p>
@@ -965,7 +1014,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload(e)} />
         </aside>
 
-        <main className="mesh-gradient flex flex-1 items-center justify-center overflow-auto p-4">
+        <main className="mesh-gradient flex flex-1 items-center justify-center p-4">
           <div className="relative w-full max-w-[1100px]">
             <div
               className="absolute inset-0 -z-10 rounded-3xl opacity-70 blur-3xl"
@@ -1006,7 +1055,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
           </div>
         </main>
 
-        <div className="flex w-full flex-col border-t border-white/10 bg-zinc-950/70 lg:w-80 lg:shrink-0 lg:border-t-0 lg:border-l">
+        <div className="flex w-full flex-col border-t border-white/10 bg-zinc-950/70 lg:sticky lg:top-16 lg:w-80 lg:shrink-0 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-t-0 lg:border-l">
           <PropertiesPanel
             shirtColor={shirtColor}
             onShirtColorChange={handleShirtColorChange}
@@ -1023,7 +1072,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
             onApplyCrop={applyCropMode}
             onCancelCrop={cancelCropMode}
           />
-          <LayersPanel fabricRef={fabricRef} />
+          <LayersPanel fabricRef={fabricRef} ready={ready} activeView={activeView} />
         </div>
       </div>
       {/* Bottom toolbar for small screens */}

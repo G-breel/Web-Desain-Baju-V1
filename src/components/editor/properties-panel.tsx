@@ -271,6 +271,24 @@ export function PropertiesPanel({
           </div>
         )}
 
+        {/* Crop action bar — always visible while crop mode is active */}
+        {cropActive && (
+          <div className="space-y-2 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3">
+            <p className="text-xs font-medium text-violet-300">Mode crop aktif</p>
+            <p className="text-xs text-zinc-400">
+              Geser/resize kotak ungu untuk area potong
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="primary" onClick={() => onApplyCrop?.()}>
+                Terapkan
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => onCancelCrop?.()}>
+                Batal
+              </Button>
+            </div>
+          </div>
+        )}
+
         {props.kind === "image" && (
           <div className="space-y-3 border-t border-white/10 pt-4">
             <p className="text-xs font-medium text-violet-300">Gambar</p>
@@ -305,30 +323,16 @@ export function PropertiesPanel({
                 Fit to Area
               </Button>
             </div>
-            <div className="space-y-2 pt-2">
-              {!cropActive ? (
+            {!cropActive && (
+              <div className="space-y-2 pt-2">
                 <Button size="sm" variant="secondary" onClick={() => onStartCrop?.()}>
                   Crop gambar
                 </Button>
-              ) : (
-                <>
-                  <p className="text-xs text-violet-300">
-                    Geser/resize kotak ungu untuk area potong
-                  </p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={() => onApplyCrop?.()}>
-                      Terapkan
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => onCancelCrop?.()}>
-                      Batal
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-            <p className="text-xs text-zinc-500">
-              Crop memotong dari file asli (tanpa turun resolusi).
-            </p>
+                <p className="text-xs text-zinc-500">
+                  Crop memotong dari file asli (tanpa turun resolusi).
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
