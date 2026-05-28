@@ -44,7 +44,7 @@ export function EditorStage({
   return (
     <div className="rounded-3xl border border-white/10 bg-zinc-950/40 p-3 shadow-2xl">
       <div 
-        className={`relative overflow-hidden rounded-2xl bg-zinc-800/30 ring-1 transition-all duration-200 ${
+        className={`relative overflow-hidden rounded-2xl bg-white ring-1 transition-all duration-200 ${
           isOutside 
             ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" 
             : "ring-white/10"

@@ -20,6 +20,9 @@ export interface ObjectProps {
   fontStyle?: string;
   textAlign?: string;
   charSpacing?: number;
+  skewX?: number;
+  curve?: number;
+  cornerRadius?: number;
   flipX?: boolean;
   flipY?: boolean;
   hasShadow?: boolean;
@@ -171,7 +174,11 @@ export function PropertiesPanel({
                 className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-100"
               >
                 {FONT_OPTIONS.map((f) => (
-                  <option key={f} value={f}>
+                  <option
+                    key={f}
+                    value={f}
+                    style={{ color: "#111827", backgroundColor: "#ffffff" }}
+                  >
                     {f}
                   </option>
                 ))}
@@ -262,6 +269,33 @@ export function PropertiesPanel({
                 onUpdate({ charSpacing: parseInt(e.target.value, 10) || 0 })
               }
             />
+            <Input
+              label="Miring (Skew)"
+              type="number"
+              min={-45}
+              max={45}
+              value={props.skewX ?? 0}
+              onChange={(e) =>
+                onUpdate({ skewX: parseInt(e.target.value, 10) || 0 })
+              }
+            />
+            <div>
+              <label className="text-xs text-zinc-400">Melengkung</label>
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={props.curve ?? 0}
+                onChange={(e) =>
+                  onUpdate({ curve: parseInt(e.target.value, 10) || 0 })
+                }
+                className="mt-2 w-full"
+              />
+              <p className="mt-1 text-[11px] text-zinc-500">
+                Nilai {props.curve ?? 0} · negatif = cekung ke bawah, positif = melengkung ke atas
+              </p>
+            </div>
             <Button
               variant={props.hasShadow ? "primary" : "ghost"}
               onClick={() => onUpdate({ hasShadow: !props.hasShadow })}
@@ -315,6 +349,44 @@ export function PropertiesPanel({
             >
               Shadow
             </Button>
+            <Input
+              label="Miring (Skew)"
+              type="number"
+              min={-45}
+              max={45}
+              value={props.skewX ?? 0}
+              onChange={(e) =>
+                onUpdate({ skewX: parseInt(e.target.value, 10) || 0 })
+              }
+            />
+            <div>
+              <label className="text-xs text-zinc-400">Lengkung gambar</label>
+              <input
+                type="range"
+                min={-60}
+                max={60}
+                step={1}
+                value={props.curve ?? 0}
+                onChange={(e) =>
+                  onUpdate({ curve: parseInt(e.target.value, 10) || 0 })
+                }
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400">Corner radius</label>
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={props.cornerRadius ?? 0}
+                onChange={(e) =>
+                  onUpdate({ cornerRadius: parseInt(e.target.value, 10) || 0 })
+                }
+                className="mt-2 w-full"
+              />
+            </div>
             <div className="flex gap-2">
               <Button size="sm" variant="secondary" onClick={onCenter}>
                 Center in Area
@@ -358,6 +430,7 @@ export function readObjectProps(obj: FabricObject | null): ObjectProps {
       fontStyle?: string;
       textAlign?: string;
       charSpacing?: number;
+      skewX?: number;
     };
     return {
       kind: "text",
@@ -369,17 +442,27 @@ export function readObjectProps(obj: FabricObject | null): ObjectProps {
       fontStyle: t.fontStyle ?? "normal",
       textAlign: t.textAlign ?? "left",
       charSpacing: t.charSpacing ?? 0,
+      skewX: typeof t.skewX === "number" ? t.skewX : 0,
+      curve: typeof (t as any).curve === "number" ? (t as any).curve : 0,
       stroke: typeof (t as any).stroke === "string" ? (t as any).stroke : undefined,
       strokeWidth: typeof (t as any).strokeWidth === "number" ? (t as any).strokeWidth : undefined,
     };
   }
 
   if (obj.type === "image") {
+    const i = obj as FabricObject & {
+      skewX?: number;
+      curve?: number;
+      cornerRadius?: number;
+    };
     return {
       kind: "image",
       ...base,
       flipX: !!obj.flipX,
       flipY: !!obj.flipY,
+      skewX: typeof i.skewX === "number" ? i.skewX : 0,
+      curve: typeof i.curve === "number" ? i.curve : 0,
+      cornerRadius: typeof i.cornerRadius === "number" ? i.cornerRadius : 0,
     };
   }
 

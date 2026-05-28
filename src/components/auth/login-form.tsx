@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { loginAction } from "@/app/actions/auth";
-import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+// import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -82,6 +82,7 @@ export function LoginForm() {
         </div>
       </form>
 
+      {/* Google auth dinonaktifkan sementara
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-white/10" />
@@ -92,6 +93,7 @@ export function LoginForm() {
       </div>
 
       <GoogleAuthButton redirectTo={redirectTo} />
+      */}
 
       <p className="mt-6 text-center text-sm text-zinc-400">
         Belum punya akun?{" "}

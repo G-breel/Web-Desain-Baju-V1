@@ -149,10 +149,17 @@ export function snapObjectToGuides(obj: FabricObject) {
 
 export const FONT_OPTIONS = [
   "Arial",
-  "Georgia",
-  "Impact",
+  "Helvetica",
+  "Tahoma",
+  "Trebuchet MS",
   "Verdana",
+  "Georgia",
+  "Garamond",
+  "Palatino Linotype",
   "Times New Roman",
+  "Book Antiqua",
+  "Impact",
   "Courier New",
+  "Lucida Console",
   "Comic Sans MS",
 ];

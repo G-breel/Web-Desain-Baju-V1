@@ -217,8 +217,46 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       // Generate dan upload thumbnail secara fire-and-forget
       const canvas = fabricRef.current;
       if (canvas) {
-        const dataUrl = canvas.toDataURL({ multiplier: 1, format: "jpeg", quality: 0.8 });
-        void saveThumbnailAction(design.id, dataUrl);
+        // Fabric v7: toCanvasElement tidak include backgroundColor
+        // Composite: warna baju + mockup + desain
+        void (async () => {
+          try {
+            const { getMockupSrc } = await import("@/lib/editor/mockup-helpers");
+            const mockupSrc = getMockupSrc(design.product_type, activeView);
+            const fabricEl = canvas.toCanvasElement(1);
+            const w = canvas.getWidth();
+            const h = canvas.getHeight();
+
+            const out = document.createElement("canvas");
+            out.width = w;
+            out.height = h;
+            const ctx = out.getContext("2d");
+            if (!ctx) return;
+
+            ctx.fillStyle = shirtColor;
+            ctx.fillRect(0, 0, w, h);
+
+            try {
+              const mockup = new Image();
+              mockup.crossOrigin = "anonymous";
+              await new Promise<void>((res) => {
+                mockup.onload = () => res();
+                mockup.onerror = () => res();
+                mockup.src = mockupSrc;
+              });
+              ctx.save();
+              ctx.globalCompositeOperation = "multiply";
+              ctx.drawImage(mockup, 0, 0, w, h);
+              ctx.restore();
+            } catch { /* skip */ }
+
+            ctx.globalCompositeOperation = "source-over";
+            ctx.drawImage(fabricEl, 0, 0, w, h);
+
+            const dataUrl = out.toDataURL("image/jpeg", 0.8);
+            void saveThumbnailAction(design.id, dataUrl);
+          } catch { /* skip thumbnail */ }
+        })();
       }
     },
     [design.id, persistCurrentView] // tidak perlu shirtColor karena pakai ref
@@ -633,6 +671,7 @@ export function DesignEditor({ design }: { design: DesignProject }) {
       if (patch.fontStyle) updates.fontStyle = patch.fontStyle;
       if (patch.textAlign) updates.textAlign = patch.textAlign;
       if (patch.charSpacing !== undefined) updates.charSpacing = patch.charSpacing;
+      if (patch.skewX !== undefined) updates.skewX = patch.skewX;
 
       if (patch.stroke !== undefined) updates.stroke = patch.stroke;
       if (patch.strokeWidth !== undefined) updates.strokeWidth = patch.strokeWidth;
@@ -646,6 +685,77 @@ export function DesignEditor({ design }: { design: DesignProject }) {
             offsetY: 3,
           })
           : null;
+      }
+
+      if (obj.isType("image")) {
+        const imageObj = obj as unknown as {
+          width?: number;
+          height?: number;
+          set: (arg: Record<string, unknown>) => void;
+          curve?: number;
+          cornerRadius?: number;
+        };
+        const imgW = Math.max(1, Number(imageObj.width ?? 1));
+        const imgH = Math.max(1, Number(imageObj.height ?? 1));
+        const curve = Math.max(-60, Math.min(60, patch.curve ?? imageObj.curve ?? 0));
+        const radius = Math.max(0, Math.min(80, patch.cornerRadius ?? imageObj.cornerRadius ?? 0));
+
+        if (patch.curve !== undefined || patch.cornerRadius !== undefined) {
+          if (Math.abs(curve) < 1 && radius <= 0) {
+            updates.clipPath = null;
+          } else if (Math.abs(curve) >= 1) {
+            const top = -imgH / 2;
+            const bottom = imgH / 2;
+            const left = -imgW / 2;
+            const right = imgW / 2;
+            const pathData = `M ${left} ${top} Q 0 ${top - curve} ${right} ${top} L ${right} ${bottom} Q 0 ${bottom + curve} ${left} ${bottom} Z`;
+            updates.clipPath = new fabric.Path(pathData, {
+              absolutePositioned: false,
+              selectable: false,
+              evented: false,
+            });
+          } else {
+            updates.clipPath = new fabric.Rect({
+              originX: "center",
+              originY: "center",
+              width: imgW,
+              height: imgH,
+              rx: radius,
+              ry: radius,
+              absolutePositioned: false,
+              selectable: false,
+              evented: false,
+            });
+          }
+          imageObj.set({ curve, cornerRadius: radius });
+        }
+      }
+
+      if (patch.curve !== undefined && obj.isType("text", "i-text", "textbox")) {
+        const textObj = obj as unknown as {
+          width?: number;
+          set: (arg: Record<string, unknown>) => void;
+          path?: unknown;
+          curve?: number;
+        };
+        const curve = Math.max(-80, Math.min(80, patch.curve));
+        const w = Math.max(140, Number(textObj.width ?? 200));
+        if (Math.abs(curve) < 2) {
+          textObj.set({ path: undefined, curve: 0 });
+        } else {
+          const arcHeight = curve; // +up / -down
+          const pathData = `M 0 0 Q ${w / 2} ${-arcHeight} ${w} 0`;
+          const path = new fabric.Path(pathData, {
+            visible: false,
+            selectable: false,
+            evented: false,
+          });
+          textObj.set({
+            path,
+            pathStartOffset: 0,
+            curve,
+          });
+        }
       }
 
       obj.set(updates);

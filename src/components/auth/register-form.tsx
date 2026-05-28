@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { registerAction } from "@/app/actions/auth";
-import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+// import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -94,8 +94,8 @@ export function RegisterForm() {
         </div>
       </div>
 
-      <GoogleAuthButton redirectTo={redirectTo} />
-
+      {/* <GoogleAuthButton redirectTo={redirectTo} /> */}
+x
       <p className="mt-6 text-center text-sm text-zinc-400">
         Sudah punya akun?{" "}
         <Link
