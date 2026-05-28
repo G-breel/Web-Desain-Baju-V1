@@ -151,7 +151,7 @@ async function exportAllViews(
 
       const json = viewData[v];
       if (json && typeof json === "object" && Object.keys(json).length > 0) {
-        await tmp.loadFromJSON(json as string);
+        await tmp.loadFromJSON(json as unknown as string);
         tmp.renderAll();
       }
 
