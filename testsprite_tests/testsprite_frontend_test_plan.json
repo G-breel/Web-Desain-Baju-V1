@@ -1,0 +1,1112 @@
+[
+  {
+    "id": "TC001",
+    "title": "Register a new account and reach the dashboard",
+    "description": "This verifies that a guest user can create an account and is taken to the dashboard after registration.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with a new account name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with a new email address"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify saved designs are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Sign out from the dashboard",
+    "description": "This verifies a signed-in user can log out from the dashboard and return to the login page.",
+    "category": "Logout",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the user menu"
+      },
+      {
+        "type": "action",
+        "description": "Sign out"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login page is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is no longer signed in"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Sign in with email and password and land on the dashboard",
+    "description": "This verifies that a registered member can sign in with email and password and access the dashboard.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify saved designs are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Save editor changes and keep them after returning",
+    "description": "This verifies a user can make an edit, save it, and later see the saved design still contains the change.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add text to the canvas"
+      },
+      {
+        "type": "action",
+        "description": "Trigger a save of the design"
+      },
+      {
+        "type": "action",
+        "description": "Return to the design after leaving the editor"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved change is still present"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the design remains available in the account"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Open editor from an existing design",
+    "description": "This verifies a signed-in user can reach an existing design in the editor from the dashboard and begin editing it.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the design editor is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the active garment view is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Choose a product type and open a new editor session",
+    "description": "This verifies that a signed-in user can select a garment type and create a new design opened in the editor.",
+    "category": "Product Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to start a new design"
+      },
+      {
+        "type": "action",
+        "description": "Choose an oversize t-shirt or hoodie product"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the editor opens"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a new design canvas is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Create a new design from product selection",
+    "description": "This verifies a signed-in user can choose a supported product and arrive in the editor with a new design started.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the product selection page"
+      },
+      {
+        "type": "action",
+        "description": "Select an oversize t-shirt or hoodie product"
+      },
+      {
+        "type": "action",
+        "description": "Start a new design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the design editor is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a new blank design is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Open an existing design from the dashboard",
+    "description": "This verifies that a signed-in user can open a saved design from the dashboard and continue editing it.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click a saved design card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the editor opens"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the design canvas is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Start a new design from the dashboard",
+    "description": "This verifies that a signed-in user can begin a new design from the dashboard and reach product selection.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to start a new design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the product selection page is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify available product types are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Rename, duplicate, and delete a design from the designs list",
+    "description": "This verifies a user can manage saved designs from the designs page and see the list update after each action.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the designs list page"
+      },
+      {
+        "type": "action",
+        "description": "Rename an existing design"
+      },
+      {
+        "type": "action",
+        "description": "Duplicate the renamed design"
+      },
+      {
+        "type": "action",
+        "description": "Delete one of the designs"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the designs list reflects the updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the deleted design is no longer displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Delete a design from the designs list",
+    "description": "This verifies that an account owner can delete a saved design and see it removed from the designs list.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the full designs list"
+      },
+      {
+        "type": "action",
+        "description": "Delete a saved design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the deleted design is removed from the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the designs list still displays remaining items"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Add text to the active design view",
+    "description": "This verifies that a designer can add a text object to the active canvas view in the editor.",
+    "category": "Product Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add a text object to the canvas"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text object is displayed on the canvas"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Switch garment views and preserve separate canvas content",
+    "description": "This verifies each garment view keeps its own independent canvas state when a user adds content and switches between views.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Switch to a different garment view"
+      },
+      {
+        "type": "action",
+        "description": "Add text to the current view"
+      },
+      {
+        "type": "action",
+        "description": "Switch back to the original garment view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the original view remains unchanged"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the added content remains on the other view"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Rename a design in the designs list",
+    "description": "This verifies that an account owner can rename a saved design and see the updated title in the designs list.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the full designs list"
+      },
+      {
+        "type": "action",
+        "description": "Rename a saved design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated design title is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the renamed design remains in the list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Search saved designs from the dashboard",
+    "description": "This verifies a signed-in user can search their saved designs and see matching results in the dashboard.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Enter a search term for a saved design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify matching designs are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify non-matching designs are hidden"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Switch garment views while editing a design",
+    "description": "This verifies that a designer can switch between garment views in the editor and each view remains available.",
+    "category": "Product Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Switch to another garment view"
+      },
+      {
+        "type": "action",
+        "description": "Switch to a different garment view again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify multiple garment views are available"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the active canvas updates for the selected view"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC017",
+    "title": "Edit an object on the canvas",
+    "description": "This verifies a signed-in user can select a canvas object and update its properties with the change reflected on the design.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add text to the canvas"
+      },
+      {
+        "type": "action",
+        "description": "Select the newly added object"
+      },
+      {
+        "type": "action",
+        "description": "Edit one of the object properties"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the object update is visible on the canvas"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC018",
+    "title": "Reorder and remove layers in the editor",
+    "description": "This verifies that a designer can manage canvas layers by changing their order and deleting an object.",
+    "category": "Product Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add two canvas objects"
+      },
+      {
+        "type": "action",
+        "description": "Move one object behind the other"
+      },
+      {
+        "type": "action",
+        "description": "Delete one canvas object"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only one object remains on the canvas"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC019",
+    "title": "Reorder or delete a layer",
+    "description": "This verifies a user can change the layer stack or remove an object and see the canvas composition update accordingly.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add two text objects to the canvas"
+      },
+      {
+        "type": "action",
+        "description": "Reorder the selected layer or delete one object"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the canvas composition reflects the layer change"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the removed object is no longer visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC020",
+    "title": "Update profile username and avatar",
+    "description": "This verifies a signed-in user can change profile details and see the updated profile information persist in the app.",
+    "category": "Profile Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the profile page"
+      },
+      {
+        "type": "action",
+        "description": "Change the username"
+      },
+      {
+        "type": "action",
+        "description": "Upload a new avatar image"
+      },
+      {
+        "type": "action",
+        "description": "Save the profile changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated username is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated avatar is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC021",
+    "title": "Duplicate a design in the designs list",
+    "description": "This verifies that an account owner can duplicate a saved design and see the copy appear in the designs list.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the full designs list"
+      },
+      {
+        "type": "action",
+        "description": "Duplicate a saved design"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a duplicated design appears in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify both the original and duplicate are available"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Duplicate an object with the keyboard shortcut",
+    "description": "This verifies a user can duplicate a selected canvas object with the keyboard and see a second copy appear.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add text to the canvas"
+      },
+      {
+        "type": "action",
+        "description": "Select the text object"
+      },
+      {
+        "type": "action",
+        "description": "Press the duplicate keyboard shortcut"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a duplicate object is visible on the canvas"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC023",
+    "title": "Update profile details and see them across the app",
+    "description": "This verifies that an account owner can update profile information and the change persists across other signed-in pages.",
+    "category": "Dashboard and Design Library",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the profile page"
+      },
+      {
+        "type": "action",
+        "description": "Update the username or avatar"
+      },
+      {
+        "type": "action",
+        "description": "Save the profile changes"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated profile information is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the change is reflected in another signed-in page"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC024",
+    "title": "Import a project file into the editor",
+    "description": "This verifies a user can import a supported project file and see the design load into the editor.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the project import control"
+      },
+      {
+        "type": "action",
+        "description": "Import a supported project file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the imported project is loaded in the editor"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the canvas content from the project is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC025",
+    "title": "Export the current design from the editor",
+    "description": "This verifies a user can export the active design from the editor and complete a file export action.",
+    "category": "Design Editor",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing design from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the export control in the editor"
+      },
+      {
+        "type": "action",
+        "description": "Export the active view or the full project"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an export action completes successfully"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the editor remains open after export"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC026",
+    "title": "View profile design count",
+    "description": "This verifies the profile page shows the user's current design count alongside profile details.",
+    "category": "Profile Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the profile page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile details are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the design count is displayed"
+      }
+    ],
+    "priority": "Low"
+  }
+]
